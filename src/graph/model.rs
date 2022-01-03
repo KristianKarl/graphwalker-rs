@@ -76,3 +76,15 @@ struct Properties {
     #[serde(default)]
     description: String,
 }
+
+pub fn get_vertex_name(vertices: &Vec<Vertex>, id: &str) -> String {
+    for vertex in vertices {
+        if vertex.id == id {
+            if vertex.name.is_empty() {
+                return String::from("Start");
+            }
+            return String::from(&vertex.name);
+        }
+    }
+    return String::from("");
+}
