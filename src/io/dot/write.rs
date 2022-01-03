@@ -1,15 +1,32 @@
-use dot_writer::DotWriter;
+use crate::graph::model::Vertex;
+
+fn get_vertex_name(vertices: &Vec<Vertex>, id: &str) -> String {
+    for vertex in vertices {
+        if vertex.id == id {
+            return String::from(&vertex.name);
+        }
+    }
+    return String::from("");
+}
 
 pub fn write(models: crate::graph::model::Models) {
     for model in models.models {
-        let mut output_bytes = Vec::new();
-        {
-            let mut writer = DotWriter::from(&mut output_bytes);
-            let mut digraph = writer.digraph();
-            for edge in model.edges {
-                digraph.edge(edge.source_vertex_id, edge.target_vertex_id);
+        println!("digraph {} {{", model.name);
+        
+        for edge in model.edges {
+            print!("{} -> {} [label=\"{}", get_vertex_name(&model.vertices, &edge.source_vertex_id),
+                                             get_vertex_name(&model.vertices, &edge.target_vertex_id),
+                                             edge.name);
+            if !edge.guard.is_empty() {
+                print!("\\n[{}]", edge.guard);
             }
+            if !edge.actions.is_empty() {
+                for action in edge.actions {
+                    print!("\\n{}", action);
+                }
+            }
+            println!("\"]");
         }
-        println!("{}", String::from_utf8(output_bytes).unwrap());
+        println!("}}");
     }
 }

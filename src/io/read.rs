@@ -9,7 +9,7 @@ fn get_extension_from_filename(file_name: &str) -> Option<&str> {
 }
 
 pub fn read(input_file: &str) -> crate::graph::model::Models {
-    dbg!(input_file);
+    debug!("{}", input_file);
 
     if std::path::Path::new(input_file).exists() {
         let suffix = get_extension_from_filename(input_file);

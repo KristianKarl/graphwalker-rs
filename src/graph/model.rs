@@ -9,7 +9,7 @@ pub struct Models {
 #[serde(rename_all = "camelCase")]
 pub struct Model {
     id: String,
-    name: String,
+    pub name: String,
     pub vertices: Vec<Vertex>,
     pub edges: Vec<Edge>,
 
@@ -23,10 +23,10 @@ pub struct Model {
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Vertex {
-    id: String,
+    pub id: String,
 
     #[serde(default)]
-    name: String,
+    pub name: String,
 
     #[serde(default)]
     shared_state: String,
@@ -47,13 +47,16 @@ pub struct Edge {
     id: String,
 
     #[serde(default)]
-    name: String,
+    pub name: String,
 
     #[serde(default)]
-    actions:Vec<String>,
+    pub actions:Vec<String>,
 
     #[serde(default)]
     requirements: Vec<String>,
+
+    #[serde(default)]
+    pub guard: String,
 
     #[serde(default)]
     properties: Properties,
