@@ -1,3 +1,3 @@
-pub mod read;
-pub mod json;
 pub mod dot;
+pub mod json;
+pub mod read;

@@ -4,14 +4,11 @@ mod io;
 #[macro_use]
 extern crate log;
 
-use clap::{arg, Arg, App, AppSettings};
+use clap::{arg, App, AppSettings, Arg};
 use env_logger::Builder;
 use log::LevelFilter;
 
-
-
 fn main() {
-
     let matches = App::new("graphwalker")
                           .version("0.0.1")
                           .author("Kristian Karl")
@@ -40,7 +37,7 @@ fn main() {
                                     )
                           )
                           .get_matches();
-    
+
     match matches.value_of("debug") {
         Some("error") => {
             Builder::new().filter_level(LevelFilter::Error).init();
@@ -57,23 +54,21 @@ fn main() {
         Some("trace") => {
             Builder::new().filter_level(LevelFilter::Trace).init();
         }
-        _ => (Builder::new().filter_level(LevelFilter::Error).init()),                
-    }                
-
+        _ => (Builder::new().filter_level(LevelFilter::Error).init()),
+    }
 
     match matches.subcommand() {
         Some(("convert", convert_matches)) => {
-
             let models = io::read::read(convert_matches.value_of("INPUT").expect("required"));
-            
+
             match convert_matches.value_of("format") {
                 Some("json") => {
                     io::json::write::write(models);
                 }
                 Some("dot") => {
-                     io::dot::write::write(models);      
+                    io::dot::write::write(models);
                 }
-                _ => (),                
+                _ => (),
             }
         }
         _ => (),

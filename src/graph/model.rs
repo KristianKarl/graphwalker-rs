@@ -1,4 +1,4 @@
-use serde_derive::{ Deserialize,Serialize };
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Models {
@@ -50,7 +50,7 @@ pub struct Edge {
     pub name: String,
 
     #[serde(default)]
-    pub actions:Vec<String>,
+    pub actions: Vec<String>,
 
     #[serde(default)]
     requirements: Vec<String>,
