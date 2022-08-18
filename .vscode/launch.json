@@ -21,7 +21,7 @@
             },
             "args": [                    
                 "convert",
-                "lmodels/login.json"
+                "models/login.json"
             ],
             "cwd": "${workspaceFolder}"
         },
