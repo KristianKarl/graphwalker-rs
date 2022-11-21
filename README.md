@@ -1,3 +1,10 @@
 # graphwalker-rust
 
-This is work in progress. The goal is to have fun with rust. So far it's more frustrating than fun... Still have no clue how modules relates to files and folders. But one end goal could be to have a tool that does somewhat of the things [GraphWalker](http://graphwalker.org) does. Let's see about that.
+This is work in progress. The goal is to have fun with rust. 
+
+Task list to work with:
+- [x] Simple data stucture for graph, vertex and edge
+- [x] Json reader and writer that is [GraphWalker](http://graphwalker.org) compliant
+- [x] Convert models in [GraphWalker](https://graphwalker.org) json into [Grapviz](https://graphviz.org/) dot format.
+- [ ] Generator and stop condition parser
+- [ ] Offline random walk implemented
