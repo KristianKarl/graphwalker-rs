@@ -1,3 +1,5 @@
+[![Actions Status](https://github.com/KristianKarl/graphwalker-rust/workflows/Build%20and%20test/badge.svg)]([https://github.com/RobDWaller/csp-generator](https://github.com/KristianKarl/graphwalker-rust)/actions)
+
 # graphwalker-rust
 
 This is work in progress. The goal is to have fun with rust. 
