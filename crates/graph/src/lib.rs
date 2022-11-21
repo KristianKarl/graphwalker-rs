@@ -1,4 +1,4 @@
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::{Deserialize,Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Models {
@@ -14,10 +14,10 @@ pub struct Model {
     pub edges: Vec<Edge>,
 
     #[serde(default)]
-    generator: String,
+    pub generator: String,
 
     #[serde(default)]
-    start_element_id: String,
+    pub start_element_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -29,22 +29,22 @@ pub struct Vertex {
     pub name: String,
 
     #[serde(default)]
-    shared_state: String,
+    pub shared_state: String,
 
     #[serde(default)]
-    requirements: Vec<String>,
+    pub requirements: Vec<String>,
 
     #[serde(default)]
-    actions: Vec<String>,
+    pub actions: Vec<String>,
 
     #[serde(default)]
-    properties: Properties,
+    pub properties: Properties,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Edge {
-    id: String,
+    pub id: String,
 
     #[serde(default)]
     pub name: String,
@@ -53,28 +53,28 @@ pub struct Edge {
     pub actions: Vec<String>,
 
     #[serde(default)]
-    requirements: Vec<String>,
+    pub requirements: Vec<String>,
 
     #[serde(default)]
     pub guard: String,
 
     #[serde(default)]
-    properties: Properties,
+    pub properties: Properties,
 
     pub source_vertex_id: String,
     pub target_vertex_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-struct Properties {
+pub struct Properties {
     #[serde(default)]
-    x: f32,
+    pub x: f32,
 
     #[serde(default)]
-    y: f32,
+    pub y: f32,
 
     #[serde(default)]
-    description: String,
+    pub description: String,
 }
 
 pub fn get_vertex_name(vertices: &Vec<Vertex>, id: &str) -> String {
@@ -87,4 +87,14 @@ pub fn get_vertex_name(vertices: &Vec<Vertex>, id: &str) -> String {
         }
     }
     return String::from("");
+}
+
+
+pub fn get_vertex<'a>(vertices: &'a Vec<Vertex>, id: &'a String) -> Result<&'a Vertex, String> {
+    for vertex in vertices {
+        if vertex.id.eq(id) {
+            return Ok(vertex);
+        }
+    }
+    Err(format!("Vertex with id '{}', is not found.", id))
 }

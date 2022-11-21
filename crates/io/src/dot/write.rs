@@ -1,6 +1,7 @@
-use crate::graph::model::get_vertex_name;
+use graph::Models;
+use graph::get_vertex_name;
 
-pub fn write(models: crate::graph::model::Models) {
+pub fn write(models: Models) {
     for model in models.models {
         println!("digraph {} {{", model.name);
 

@@ -1,0 +1,11 @@
+[package]
+name = "io"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+graph = { path = "../graph" }
+log = "0.4.17"
+serde = { version = "1.0.147", features = ["derive"] }
+serde_json = "1.0.87"
