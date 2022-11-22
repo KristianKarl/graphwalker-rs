@@ -1,5 +1,5 @@
-use graph::Models;
 use graph::get_vertex_name;
+use graph::Models;
 
 pub fn write(models: Models) {
     for model in models.models {

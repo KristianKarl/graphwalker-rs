@@ -1,10 +1,10 @@
+use graph::Models;
+use log::{debug, trace};
 use std::ffi::OsStr;
 use std::path::Path;
-use log::{debug, trace};
-use graph::Models;
 
-pub mod json;
 pub mod dot;
+pub mod json;
 
 fn get_extension_from_filename(file_name: &str) -> Option<&str> {
     Path::new(file_name).extension().and_then(OsStr::to_str)

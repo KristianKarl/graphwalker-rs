@@ -3,71 +3,69 @@ extern crate log;
 
 use std::process;
 
-use clap::{arg, App, AppSettings, Arg};
+use clap::{arg, Command};
 use env_logger::Builder;
 use log::LevelFilter;
 
-
-
 fn main() {
-    let matches = App::new("graphwalker")
+    let matches = Command::new("graphwalker")
                           .version("0.0.1")
                           .author("Kristian Karl")
                           .about("Model-based testing tool")
-                          .setting(AppSettings::ArgRequiredElseHelp)
+                          .arg_required_else_help(true)
+                          .subcommand_required(true)
                           .arg(
-                            Arg::new("debug")
-                            .short('d')
-                            .long("debug")
+                            arg!(--debug <LOG_LEVEL>)
                             .help("select the log level")
-                            .possible_values(["error", "warn", "info", "debug", "trace"])
-                            .default_value("error"),
+                            .default_values(["error", "warn", "info", "debug", "trace"])
+                            .default_missing_value("error"),
                           )
                           .subcommand(
-                            App::new("convert")
+                            Command::new("convert")
                                     .about("Convert models between different formats. The output is written to standard outpout.")
                                     .arg(arg!(<INPUT> "The file with model(s) to convert from"))
-                                    .setting(AppSettings::ArgRequiredElseHelp)
                                     .arg(
-                                      Arg::new("format")
-                                          .short('f')
-                                          .long("format")
+                                      arg!(--format <FORMAT>)
                                           .help("select the format to convert into")
-                                          .possible_values(["json", "dot"])
-                                          .default_value("json"),
+                                          .default_values(["json", "dot"])
+                                          .default_missing_value("json"),
                                   )
-                            )
-                        .subcommand(
-                            App::new("offline")
-                                    .about("Creates a path through the models. The output is written to standard outpout.")
-                                    .arg(arg!(<INPUT> "The file with model(s) to use"))
-                                    .setting(AppSettings::ArgRequiredElseHelp)
-                                )
-                        .get_matches();
+                          )
+                          .subcommand(
+                                Command::new("offline")
+                                        .about("Creates a path through the models. The output is written to standard outpout.")
+                                        .arg(arg!(<INPUT> "The file with model(s) to use"))
+                                    )
+                          .get_matches();
 
-    match matches.value_of("debug") {
-        Some("error") => {
-            Builder::new().filter_level(LevelFilter::Error).init();
+    if let Some(debug) = matches.get_one::<String>("debug") {
+        match debug.as_str() {
+            "error" => {
+                Builder::new().filter_level(LevelFilter::Error).init();
+            }
+            "warn" => {
+                Builder::new().filter_level(LevelFilter::Warn).init();
+            }
+            "info" => {
+                Builder::new().filter_level(LevelFilter::Info).init();
+            }
+            "debug" => {
+                Builder::new().filter_level(LevelFilter::Debug).init();
+            }
+            "trace" => {
+                Builder::new().filter_level(LevelFilter::Trace).init();
+            }
+            _ => Builder::new().filter_level(LevelFilter::Error).init(),
         }
-        Some("warn") => {
-            Builder::new().filter_level(LevelFilter::Warn).init();
-        }
-        Some("info") => {
-            Builder::new().filter_level(LevelFilter::Info).init();
-        }
-        Some("debug") => {
-            Builder::new().filter_level(LevelFilter::Debug).init();
-        }
-        Some("trace") => {
-            Builder::new().filter_level(LevelFilter::Trace).init();
-        }
-        _ => Builder::new().filter_level(LevelFilter::Error).init(),
     }
 
     match matches.subcommand() {
         Some(("convert", convert_matches)) => {
-            let file_read_result =
-                io::read(convert_matches.value_of("INPUT").expect("required"));
+            let file_read_result = io::read(
+                convert_matches
+                    .get_one::<String>("INPUT")
+                    .expect("required"),
+            );
             let models = match file_read_result {
                 Ok(models) => models,
                 Err(error) => {
@@ -76,20 +74,25 @@ fn main() {
                 }
             };
 
-            match convert_matches.value_of("format") {
-                Some("json") => {
-                    io::json::write::write(models);
+            if let Some(format) = convert_matches.get_one::<String>("format") {
+                match format.as_str() {
+                    "json" => {
+                        io::json::write::write(models);
+                    }
+                    "dot" => {
+                        io::dot::write::write(models);
+                    }
+                    _ => (),
                 }
-                Some("dot") => {
-                    io::dot::write::write(models);
-                }
-                _ => (),
             }
         }
 
         Some(("offline", offline_matches)) => {
-            let file_read_result =
-                io::read(offline_matches.value_of("INPUT").expect("required"));
+            let file_read_result = io::read(
+                offline_matches
+                    .get_one::<String>("INPUT")
+                    .expect("required"),
+            );
             let _models = match file_read_result {
                 Ok(models) => models,
                 Err(error) => {

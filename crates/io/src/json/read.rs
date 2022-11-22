@@ -1,6 +1,6 @@
-use std::fs;
-use log::debug;
 use graph::Models;
+use log::debug;
+use std::fs;
 
 pub fn read(input_file: &str) -> Models {
     debug!("{}", input_file);

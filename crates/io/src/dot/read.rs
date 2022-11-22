@@ -1,5 +1,5 @@
-use log::debug;
 use graph::Models;
+use log::debug;
 
 pub fn read(input_file: &str) -> Models {
     debug!("{}", input_file);

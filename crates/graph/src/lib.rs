@@ -1,4 +1,4 @@
-use serde_derive::{Deserialize,Serialize};
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Models {
@@ -88,7 +88,6 @@ pub fn get_vertex_name(vertices: &Vec<Vertex>, id: &str) -> String {
     }
     return String::from("");
 }
-
 
 pub fn get_vertex<'a>(vertices: &'a Vec<Vertex>, id: &'a String) -> Result<&'a Vertex, String> {
     for vertex in vertices {
