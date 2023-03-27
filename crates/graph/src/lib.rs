@@ -32,7 +32,7 @@ impl Model {
         }
     }
 
-    fn get_vertex(&self, id: String) -> Result<Vertex, String> {
+    pub fn get_vertex(&self, id: String) -> Result<Vertex, String> {
         for vertex in self.vertices.iter() {
             if vertex.id == id {
                 return Ok(vertex.clone());
@@ -41,7 +41,7 @@ impl Model {
         Err(format!("Vertex with id '{}', is not found.", id))
     }
 
-    fn get_edge(&self, id: String) -> Result<Edge, String> {
+    pub fn get_edge(&self, id: String) -> Result<Edge, String> {
         for edge in self.edges.iter() {
             if edge.id == id {
                 return Ok(edge.clone());
@@ -164,27 +164,6 @@ impl Properties {
             description: "".to_string(),
         }
     }
-}
-
-pub fn get_vertex_name(vertices: &Vec<Vertex>, id: &str) -> String {
-    for vertex in vertices {
-        if vertex.id == id {
-            if vertex.name.is_empty() {
-                return String::from("Start");
-            }
-            return String::from(&vertex.name);
-        }
-    }
-    return String::from("");
-}
-
-pub fn get_vertex<'a>(vertices: &'a Vec<Vertex>, id: &'a String) -> Result<&'a Vertex, String> {
-    for vertex in vertices {
-        if vertex.id.eq(id) {
-            return Ok(vertex);
-        }
-    }
-    Err(format!("Vertex with id '{}', is not found.", id))
 }
 
 #[cfg(test)]
