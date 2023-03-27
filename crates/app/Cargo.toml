@@ -10,3 +10,8 @@ io = { path = "../io"}
 clap = "4.0.26"
 env_logger = "0.10.0"
 log = "0.4.17"
+exitcode = "1.1.2"
+
+[dev-dependencies]
+assert_cmd = "2.0.8"
+predicates = "3.0.2"

@@ -1,8 +1,6 @@
 #[macro_use]
 extern crate log;
 
-use std::process;
-
 use clap::{arg, Command};
 use env_logger::Builder;
 use log::LevelFilter;
@@ -70,7 +68,7 @@ fn main() {
                 Ok(models) => models,
                 Err(error) => {
                     error!("{}", &error);
-                    process::exit(1);
+                    std::process::exit(exitcode::SOFTWARE);
                 }
             };
 
@@ -82,7 +80,10 @@ fn main() {
                     "dot" => {
                         io::dot::write::write(models);
                     }
-                    _ => (),
+                    _ => {
+                        error!("Output format for file is not yet implemented.");
+                        std::process::exit(exitcode::SOFTWARE);
+                    },
                 }
             }
         }
@@ -97,14 +98,15 @@ fn main() {
                 Ok(models) => models,
                 Err(error) => {
                     error!("{}", &error);
-                    process::exit(1);
+                    std::process::exit(exitcode::SOFTWARE);
                 }
             };
         }
 
         _ => {
             error!("subcommand not implemented");
-            process::exit(1);
+            std::process::exit(exitcode::SOFTWARE);
         }
     }
+    std::process::exit(exitcode::OK);
 }
