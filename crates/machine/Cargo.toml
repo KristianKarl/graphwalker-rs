@@ -1,0 +1,13 @@
+[package]
+name = "machine"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+graph = { path = "../graph" }
+log = "0.4.17"
+rand = "0.8.5"
+
+[dev-dependencies]
+io = { path = "../io" }

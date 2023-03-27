@@ -8,7 +8,7 @@ pub struct Models {
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Model {
-    id: String,
+    pub id: String,
     pub name: String,
     pub vertices: Vec<Vertex>,
     pub edges: Vec<Edge>,
@@ -21,7 +21,7 @@ pub struct Model {
 }
 
 impl Model {
-    fn new() -> Model {
+    pub fn new() -> Model {
         Model {
             id: "".to_string(),
             name: "".to_string(),
@@ -73,7 +73,7 @@ pub struct Vertex {
 }
 
 impl Vertex {
-    fn new() -> Vertex {
+    pub fn new() -> Vertex {
         Vertex {
             id: "".to_string(),
             name: "".to_string(),
@@ -84,7 +84,7 @@ impl Vertex {
         }
     }
 
-    fn id(mut self, id: String) -> Vertex {
+    pub fn id(mut self, id: String) -> Vertex {
         self.id = id;
         self
     }
@@ -115,7 +115,7 @@ pub struct Edge {
 }
 
 impl Edge {
-    fn new() -> Edge {
+    pub fn new() -> Edge {
         Edge {
             id: "".to_string(),
             name: "".to_string(),
@@ -128,17 +128,17 @@ impl Edge {
         }
     }
 
-    fn id(mut self, id: String) -> Edge {
+    pub fn id(mut self, id: String) -> Edge {
         self.id = id;
         self
     }
 
-    fn source_vertex_id(mut self, id: String) -> Edge {
+    pub fn source_vertex_id(mut self, id: String) -> Edge {
         self.source_vertex_id = id;
         self
     }
 
-    fn target_vertex_id(mut self, id: String) -> Edge {
+    pub fn target_vertex_id(mut self, id: String) -> Edge {
         self.target_vertex_id = id;
         self
     }
