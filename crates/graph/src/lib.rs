@@ -51,7 +51,6 @@ impl Model {
     }
 }
 
-
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Vertex {
@@ -91,7 +90,6 @@ impl Vertex {
     }
 }
 
-
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Edge {
@@ -127,7 +125,7 @@ impl Edge {
             requirements: vec![],
             actions: vec![],
             properties: Properties::new(),
-         }
+        }
     }
 
     fn id(mut self, id: String) -> Edge {
@@ -146,7 +144,6 @@ impl Edge {
     }
 }
 
-
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct Properties {
     #[serde(default)]
@@ -164,11 +161,10 @@ impl Properties {
         Properties {
             x: 0f32,
             y: 0f32,
-            description: "".to_string()    
+            description: "".to_string(),
         }
     }
 }
-
 
 pub fn get_vertex_name(vertices: &Vec<Vertex>, id: &str) -> String {
     for vertex in vertices {
@@ -191,7 +187,6 @@ pub fn get_vertex<'a>(vertices: &'a Vec<Vertex>, id: &'a String) -> Result<&'a V
     Err(format!("Vertex with id '{}', is not found.", id))
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -201,8 +196,18 @@ mod tests {
         model.vertices.push(Vertex::new().id("a".to_string()));
         model.vertices.push(Vertex::new().id("b".to_string()));
         model.vertices.push(Vertex::new().id("c".to_string()));
-        model.edges.push(Edge::new().id("a->b".to_string()).source_vertex_id("a".to_string()).target_vertex_id("a".to_string()));
-        model.edges.push(Edge::new().id("b->c".to_string()).source_vertex_id("b".to_string()).target_vertex_id("c".to_string()));
+        model.edges.push(
+            Edge::new()
+                .id("a->b".to_string())
+                .source_vertex_id("a".to_string())
+                .target_vertex_id("a".to_string()),
+        );
+        model.edges.push(
+            Edge::new()
+                .id("b->c".to_string())
+                .source_vertex_id("b".to_string())
+                .target_vertex_id("c".to_string()),
+        );
         model
     }
 
@@ -220,7 +225,10 @@ mod tests {
         assert_eq!(a.id, "a");
 
         let b = model.get_vertex("x".to_string());
-        assert_eq!(b.err(), Some("Vertex with id 'x', is not found.".to_string()));
+        assert_eq!(
+            b.err(),
+            Some("Vertex with id 'x', is not found.".to_string())
+        );
     }
 
     #[test]

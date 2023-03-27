@@ -83,7 +83,7 @@ fn main() {
                     _ => {
                         error!("Output format for file is not yet implemented.");
                         std::process::exit(exitcode::SOFTWARE);
-                    },
+                    }
                 }
             }
         }

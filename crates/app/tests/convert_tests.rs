@@ -9,10 +9,16 @@ fn convert_help() -> Result<(), Box<dyn std::error::Error>> {
     cmd.arg("convert");
     cmd.assert()
         .failure()
-        .stderr(predicate::str::contains("the following required arguments were not provided:"))
+        .stderr(predicate::str::contains(
+            "the following required arguments were not provided:",
+        ))
         .stderr(predicate::str::contains("<INPUT>"))
-        .stderr(predicate::str::contains("Usage: graphwalker convert <INPUT>"))
-        .stderr(predicate::str::contains("For more information, try '--help'"));
+        .stderr(predicate::str::contains(
+            "Usage: graphwalker convert <INPUT>",
+        ))
+        .stderr(predicate::str::contains(
+            "For more information, try '--help'",
+        ));
 
     Ok(())
 }
@@ -72,9 +78,9 @@ fn ouput_file_format_not_yet_implemented() -> Result<(), Box<dyn std::error::Err
 
     cmd.arg("convert").arg("tests/models/login.json");
     cmd.arg("--format").arg("graphml");
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("Output format for file is not yet implemented"));
+    cmd.assert().failure().stderr(predicate::str::contains(
+        "Output format for file is not yet implemented",
+    ));
 
     Ok(())
 }
