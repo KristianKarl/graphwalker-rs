@@ -49,6 +49,20 @@ impl Model {
         }
         Err(format!("Edge with id '{}', is not found.", id))
     }
+
+    pub fn has_id(&self, id: Option<String>) -> bool {
+        match id {
+            Some(i) => {
+                if self.edges.iter().any(|e| e.id == i) {
+                    return true;
+                } else if self.vertices.iter().any(|v| v.id == i) {
+                    return true;
+                }
+                return false;
+            }
+            None => return false,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -218,5 +232,17 @@ mod tests {
 
         let b = model.get_edge("x".to_string());
         assert_eq!(b.err(), Some("Edge with id 'x', is not found.".to_string()));
+    }
+
+    #[test]
+    fn has_id_test() {
+        let model = create_model();
+        assert!(model.has_id(Some("a".to_string())));
+        assert!(model.has_id(Some("c".to_string())));
+        assert!(model.has_id(Some("b->c".to_string())));
+
+        // Negative tests
+        assert!(!model.has_id(None));
+        assert!(!model.has_id(Some("x".to_string())));
     }
 }
