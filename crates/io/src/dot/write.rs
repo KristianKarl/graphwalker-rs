@@ -1,24 +1,20 @@
 use graph::Models;
 
 pub fn write(models: Models) {
-    for model in models.models {
-        println!("digraph {} {{", model.name);
+    for i in models.models {
+        let model = i.1;
+        println!("digraph {} {{", model.name.clone().unwrap());
 
-        for edge in model.edges.iter() {
+        for j in model.edges {
+            let edge = j.1;
             print!(
                 "  {} -> {} [label=\"{}",
-                model
-                    .get_vertex(edge.source_vertex_id.clone())
-                    .unwrap()
-                    .name,
-                model
-                    .get_vertex(edge.target_vertex_id.clone())
-                    .unwrap()
-                    .name,
-                edge.name
+                model.vertices.get(&edge.source_vertex_id.clone().unwrap()).clone().unwrap().name.clone().unwrap(),
+                model.vertices.get(&edge.target_vertex_id.clone().unwrap()).clone().unwrap().name.clone().unwrap(),
+                edge.name.clone().unwrap()
             );
-            if !edge.guard.is_empty() {
-                print!("\\n[{}]", edge.guard);
+            if !edge.guard.is_none() {
+                print!("\\n[{}]", edge.guard.clone().unwrap());
             }
             if !edge.actions.is_empty() {
                 for action in edge.actions.iter() {
