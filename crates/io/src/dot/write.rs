@@ -9,8 +9,22 @@ pub fn write(models: Models) {
             let edge = j.1;
             print!(
                 "  {} -> {} [label=\"{}",
-                model.vertices.get(&edge.source_vertex_id.clone().unwrap()).clone().unwrap().name.clone().unwrap(),
-                model.vertices.get(&edge.target_vertex_id.clone().unwrap()).clone().unwrap().name.clone().unwrap(),
+                model
+                    .vertices
+                    .get(&edge.source_vertex_id.clone().unwrap())
+                    .clone()
+                    .unwrap()
+                    .name
+                    .clone()
+                    .unwrap(),
+                model
+                    .vertices
+                    .get(&edge.target_vertex_id.clone().unwrap())
+                    .clone()
+                    .unwrap()
+                    .name
+                    .clone()
+                    .unwrap(),
                 edge.name.clone().unwrap()
             );
             if !edge.guard.is_none() {

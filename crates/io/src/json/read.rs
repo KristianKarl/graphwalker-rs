@@ -22,12 +22,14 @@ mod tests {
 
         assert_eq!(models.models.len(), 1);
 
-        let m = models.models.get("853429e2-0528-48b9-97b3-7725eafbb8b5").unwrap();
+        let m = models
+            .models
+            .get("853429e2-0528-48b9-97b3-7725eafbb8b5")
+            .unwrap();
         assert_eq!(m.vertices.len(), 4);
         assert_eq!(m.edges.len(), 9);
 
         let v = m.vertices.get("n2").unwrap();
         assert_eq!(v.name.clone().unwrap(), "v_LoginPrompted");
     }
-   
 }

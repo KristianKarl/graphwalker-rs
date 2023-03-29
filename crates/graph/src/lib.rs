@@ -130,6 +130,21 @@ impl Model {
             None => return false,
         }
     }
+
+    pub fn out_edges(&mut self, id: Option<String>) -> Option<Vec<String>> {
+        match id {
+            Some(i) => {
+                let mut out_edges: Vec<String> = Vec::new();
+                for (key, edge) in &self.edges {
+                    if edge.source_vertex_id.clone().unwrap() == i {
+                        out_edges.push(key.clone().to_string());
+                    }
+                }
+                return Some(out_edges);
+            }
+            None => return None,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]

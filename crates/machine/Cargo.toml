@@ -11,3 +11,4 @@ rand = "0.8.5"
 
 [dev-dependencies]
 io = { path = "../io" }
+pretty_assertions = "1.3.0"
