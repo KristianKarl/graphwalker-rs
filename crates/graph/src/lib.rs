@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use serde_derive::{Deserialize, Serialize};
 
+// Deserialization used by example from https://github.com/serde-rs/serde/issues/936
 mod models_to_hash {
     use super::Model;
 
