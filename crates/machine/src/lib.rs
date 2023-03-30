@@ -27,6 +27,11 @@ impl Profile {
     fn new() -> Profile {
         Profile { steps: Vec::new() }
     }
+
+    fn push(&mut self, step: Step ) {
+        log::trace!("{:?}", step.clone());
+        self.steps.push(step);
+    }
 }
 #[derive(Debug, Clone)]
 struct Context {
@@ -151,7 +156,7 @@ impl Machine {
                 {
                     Some(context) => {
                         context.current_element_id = self.start_element_id.clone();
-                        self.profile.steps.push(Step {
+                        self.profile.push(Step {
                             context_id: context.id.clone(),
                             element_id: context.current_element_id.clone().unwrap(),
                         });
@@ -187,7 +192,7 @@ impl Machine {
                             .get(&context.current_element_id.clone().unwrap())
                             .unwrap();
                         context.current_element_id = e.target_vertex_id.clone();
-                        self.profile.steps.push(Step {
+                        self.profile.push(Step {
                             context_id: context.id.clone(),
                             element_id: context.current_element_id.clone().unwrap(),
                         });
@@ -231,7 +236,7 @@ impl Machine {
                                 match list.get(index) {
                                     Some(i) => {
                                         context.current_element_id = Some(i.clone());
-                                        self.profile.steps.push(Step {
+                                        self.profile.push(Step {
                                             context_id: context.id.clone(),
                                             element_id: context.current_element_id.clone().unwrap(),
                                         });
