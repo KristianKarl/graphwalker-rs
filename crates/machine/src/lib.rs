@@ -117,12 +117,13 @@ impl Machine {
      * when a model in a context is fullfilled.
      * If the macine is not ready toi run, None is returned.
      */
-    pub fn has_next(&self) -> Option<bool> {
+    pub fn has_next(&mut self) -> Option<bool> {
         match self.get_fullfilment() {
             Some(full_filment) => {
                 if full_filment < 1. {
                     return Some(true);
                 } else {
+                    self.status = MachineStatus::Ended;
                     return Some(false);
                 }
             }
@@ -313,7 +314,7 @@ impl Machine {
         }
     }
 
-    pub fn walk(&mut self) -> Result<&'static str, &'static str> {
+    pub fn walk(&mut self) -> Result<(), &'static str> {
         loop {
             match self.next() {
                 Some(_next_id) => match self.has_next() {
@@ -335,7 +336,7 @@ impl Machine {
         if self.status != MachineStatus::Ended {
             return Err("Walking the models did not end as expected.");
         }
-        Ok("Walking the model ended in success")
+        Ok(())
     }
 }
 
@@ -349,11 +350,11 @@ mod tests {
     fn walk() {
         let mut machine = Machine::new();
         let res = machine.load_models(json::read::read(
-            "/home/krikar//dev/graphwalker-rs/crates/machine/tests/models/login.json",
+            "/home/krikar//dev/graphwalker-rs/models/simple.json",
         ));
         assert!(res.is_ok());
         let res = machine.walk();
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", Err::<(), Result<(), &str>>(res));
     }
 
     #[test]
@@ -377,7 +378,6 @@ mod tests {
         loop {
             match machine.next() {
                 Some(next_id) => {
-                    println!("{}", next_id);
                     path.push(next_id);
                     assert_eq!(machine.status, MachineStatus::Running);
 

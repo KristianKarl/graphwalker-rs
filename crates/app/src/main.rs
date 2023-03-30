@@ -110,11 +110,12 @@ fn main() {
             }
 
             match machine.walk() {
-                Ok(success) => println!("{success:?}"),
-                Err(error) => {
-                    error!("{}", &error);
+                Ok(success) => {
                     let json_str = serde_json::to_string_pretty(&machine.get_profile()).unwrap();
                     println!("{}", json_str);
+                }
+                Err(error) => {
+                    error!("{}", &error);
                     std::process::exit(exitcode::SOFTWARE);
                 }
             }
