@@ -63,6 +63,7 @@ fn step(step: Step, unvisited_elements: &mut HashMap<String, u32>, profile: &mut
         Some(value) => {
             let visited = value + 1;
             unvisited_elements.insert(step.context_id.clone() + &step.element_id.clone(), visited);
+            log::trace!("Elements visited{:?}", unvisited_elements);
         }
         None => {
             log::error!(
@@ -96,7 +97,7 @@ impl Machine {
      * Calculates if the machine has covered the models given their stop conditions
      */
     fn get_fullfilment(&self) -> Option<f32> {
-        let mut element_count = self.unvisited_elements.len();
+        let element_count = self.unvisited_elements.len();
 
         if element_count == 0 {
             log::error!("No elements in the models. This was unexpected");
@@ -162,7 +163,7 @@ impl Machine {
             }
 
             log::debug!(
-                "Models has valid start context and start elements: {:?}, {:?}",
+                "Models has valid start context and start element: {:?}, {:?}",
                 self.start_context_id.as_deref(),
                 self.start_element_id.as_deref()
             );
@@ -180,6 +181,7 @@ impl Machine {
             return Some(ctx.current_element_id.clone().unwrap());
         } else if self.status == MachineStatus::Running {
             if self.current_context_id.is_none() {
+                log::error!("The machine has no current context set. This is unexpected");
                 self.status = MachineStatus::Ended;
                 return None;
             }
@@ -195,39 +197,38 @@ impl Machine {
                         self.current_context_id.as_deref(),
                         context.current_element_id.as_deref()
                     );
-                    /*
-                     * Is the current element an edge, and does is exist in the mdoel?
-                     */
-                    if context
+
+                    // Is the current element an edge, and does is exist in the mdoel?
+                    match context
                         .model
                         .edges
-                        .iter()
-                        .any(|t| t.1.id == context.current_element_id)
+                        .get(&context.current_element_id.clone().unwrap())
                     {
-                        let e: &Edge = context
-                            .model
-                            .edges
-                            .get(&context.current_element_id.clone().unwrap())
-                            .unwrap();
-                        context.current_element_id = e.target_vertex_id.clone();
-                        step(
-                            Step {
-                                context_id: context.id.clone(),
-                                element_id: context.current_element_id.clone().unwrap(),
-                            },
-                            &mut self.unvisited_elements,
-                            &mut self.profile,
-                        );
-                        return e.target_vertex_id.clone();
+                        None => {}
+                        Some(e) => {
+                            context.current_element_id = e.target_vertex_id.clone();
+                            step(
+                                Step {
+                                    context_id: context.id.clone(),
+                                    element_id: context.current_element_id.clone().unwrap(),
+                                },
+                                &mut self.unvisited_elements,
+                                &mut self.profile,
+                            );
+                            return e.target_vertex_id.clone();
+                        }
                     }
+
                     /*
                      * Is the current element a vertex, and does is exist in the mdoel?
                      */
-                    else if context
+                    if context
                         .model
                         .vertices
                         .contains_key(&context.current_element_id.clone().unwrap())
                     {
+                        let mut candidate_elements: Vec<(String, String)> = Vec::new();
+
                         /*
                          * First check if the current vertex is a shared vertex.
                          */
@@ -238,9 +239,6 @@ impl Machine {
                         {
                             Some(vertex) => {
                                 if vertex.shared_state.is_some() {
-                                    let mut list_of_same_shared_states =
-                                        Vec::<(String, String)>::new();
-
                                     for (_key, spare_list_context) in spare_list {
                                         log::trace!(
                                             "Checking in model: {:?} for {:?}",
@@ -253,96 +251,53 @@ impl Machine {
                                             if other_vertex.shared_state.as_deref()
                                                 == vertex.shared_state.as_deref()
                                             {
-                                                list_of_same_shared_states.push((
+                                                candidate_elements.push((
                                                     spare_list_context.id.clone(),
                                                     other_vertex.id.clone().unwrap(),
                                                 ));
                                                 log::trace!(
                                                     "Adding shared state: {:?}",
-                                                    list_of_same_shared_states.last()
+                                                    candidate_elements.last()
                                                 );
                                             }
                                         }
                                     }
                                     log::trace!(
                                         "Matching shared states: {}",
-                                        list_of_same_shared_states.len()
+                                        candidate_elements.len()
                                     );
-
-                                    // If we have shared states matches, let's pick one vertex to swicth to
-                                    if list_of_same_shared_states.len() > 1 {
-                                        let mut rng = rand::thread_rng();
-                                        let index =
-                                            rng.gen_range(0..list_of_same_shared_states.len());
-                                        log::trace!("Random number is: {}", index);
-                                        match list_of_same_shared_states.get(index) {
-                                            Some(context_vertex) => {
-                                                log::debug!(
-                                                    "Switching to shared state: {}, {}",
-                                                    context_vertex.0.clone(),
-                                                    context_vertex.1.clone()
-                                                );
-                                                step(
-                                                    Step {
-                                                        context_id: context_vertex.0.clone(),
-                                                        element_id: context_vertex.1.clone(),
-                                                    },
-                                                    &mut self.unvisited_elements,
-                                                    &mut self.profile,
-                                                );
-                                                self.current_context_id =
-                                                    Some(context_vertex.0.clone());
-                                                self.contexts
-                                                    .get_mut(&context_vertex.0.clone())
-                                                    .unwrap()
-                                                    .current_element_id =
-                                                    Some(context_vertex.1.clone());
-                                                return Some(context_vertex.1.clone());
-                                            }
-                                            None => {
-                                                log::error!(
-                                                    "Could not switch to another shared state."
-                                                );
-                                                self.status = MachineStatus::Ended;
-                                                return None;
-                                            }
-                                        }
-                                    }
                                 }
                             }
                             None => {}
                         }
 
                         match context.model.out_edges(context.current_element_id.clone()) {
+                            None => {}
                             Some(list) => {
-                                let mut rng = rand::thread_rng();
-                                let index = rng.gen_range(0..list.len());
-                                match list.get(index) {
-                                    Some(i) => {
-                                        context.current_element_id = Some(i.clone());
-                                        step(
-                                            Step {
-                                                context_id: context.id.clone(),
-                                                element_id: context
-                                                    .current_element_id
-                                                    .clone()
-                                                    .unwrap(),
-                                            },
-                                            &mut self.unvisited_elements,
-                                            &mut self.profile,
-                                        );
-                                        return Some(i.clone());
-                                    }
-                                    None => {
-                                        log::error!(
-                                            "Random selection of an edge resultes in failure"
-                                        );
-                                        self.status = MachineStatus::Ended;
-                                        return None;
-                                    }
+                                for element_id in list {
+                                    candidate_elements.push((context.id.clone(), element_id));
                                 }
                             }
+                        }
+
+                        let mut rng = rand::thread_rng();
+                        let index = rng.gen_range(0..candidate_elements.len());
+                        match candidate_elements.get(index) {
+                            Some((ctx_id, elem_id)) => {
+                                self.current_context_id = Some(ctx_id.clone());
+                                context.current_element_id = Some(elem_id.clone());
+                                step(
+                                    Step {
+                                        context_id: context.id.clone(),
+                                        element_id: context.current_element_id.clone().unwrap(),
+                                    },
+                                    &mut self.unvisited_elements,
+                                    &mut self.profile,
+                                );
+                                return Some(elem_id.clone());
+                            }
                             None => {
+                                log::error!("Random selection of an edge resulted in failure");
                                 self.status = MachineStatus::Ended;
                                 return None;
                             }
@@ -471,7 +426,7 @@ mod tests {
     fn walk() {
         let mut machine = Machine::new();
         let res = machine.load_models(json::read::read(
-            "/home/krikar//dev/graphwalker-rs/models/petclinic.json",
+            "/home/krikar/dev/rust/graphwalker-rs/models/simple.json",
         ));
         assert!(res.is_ok());
         let res = machine.walk();
