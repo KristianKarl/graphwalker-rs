@@ -1,7 +1,7 @@
 use rand::Rng;
 use std::collections::HashMap;
 
-use graph::{Edge, Model};
+use graph::{Edge, Model, Models};
 
 #[derive(Debug, Clone)]
 struct StopCondition {}
@@ -278,6 +278,35 @@ impl Machine {
             None => return false,
         }
     }
+
+    fn load_models(&mut self, models: Models) -> Result<Option<String>, &'static str> {
+        for (key, model) in models.models {
+            self.contexts.insert(
+                key.clone(),
+                Context {
+                    id: key.clone(),
+                    model: model.clone(),
+                    generators: Vec::new(),
+                    current_element_id: None,
+                },
+            );
+            if model.start_element_id.is_some() {
+                self.start_element_id = model.start_element_id;
+                self.start_context_id = model.id;
+            }
+        }
+
+        /*
+         * Verify the corectness of starting element and context.
+         */
+        match self.start_element_id {
+            Some(_) => match self.start_context_id {
+                Some(_) => return Ok(self.start_context_id.clone()),
+                None => Err("Could not determine whch model to start in"),
+            },
+            None => Err("Did not find the starting element in any model"),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -289,34 +318,18 @@ mod tests {
     #[test]
     fn machine() {
         let mut machine = Machine::new();
-        machine.start_context_id = Some("853429e2-0528-48b9-97b3-7725eafbb8b5".to_string());
-        machine.start_element_id = Some("e0".to_string());
-        assert_eq!(machine.contexts.len(), 0);
-
-        for (key, model) in json::read::read(
-            "/home/krikar//dev/graphwalker-rs/crates/machine/tests/models/login.json",
-        )
-        .models
-        {
-            machine.contexts.insert(
-                key.clone(),
-                Context {
-                    id: key.clone(),
-                    model: model,
-                    generators: Vec::new(),
-                    current_element_id: None,
-                },
-            );
-        }
+        assert!(machine
+            .load_models(json::read::read(
+                "/home/krikar//dev/graphwalker-rs/crates/machine/tests/models/login.json",
+            ))
+            .is_ok());
 
         assert_eq!(machine.contexts.len(), 1);
-        let m = machine
-            .contexts
-            .get("853429e2-0528-48b9-97b3-7725eafbb8b5")
-            .unwrap()
-            .model
-            .clone();
-        assert_eq!(m.start_element_id.unwrap(), "e0");
+        assert_eq!(
+            machine.start_context_id.clone().unwrap(),
+            "853429e2-0528-48b9-97b3-7725eafbb8b5".to_string()
+        );
+        assert_eq!(machine.start_element_id.clone().unwrap(), "e0".to_string());
         assert_eq!(machine.status, MachineStatus::NotStarted);
 
         let mut path = Vec::new();
