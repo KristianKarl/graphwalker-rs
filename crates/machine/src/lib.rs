@@ -265,13 +265,18 @@ impl Machine {
         if self.start_context_id.is_none() || self.start_element_id.is_none() {
             return false;
         }
-        let context = self.contexts.get(&self.start_context_id.clone().unwrap());
-        if context.is_some() {
-            if context.unwrap().model.has_id(self.start_element_id.clone()) {
-                return true;
+        match self
+            .contexts
+            .get_mut(&self.start_context_id.clone().unwrap())
+        {
+            Some(context) => {
+                if context.model.has_id(self.start_element_id.clone()) {
+                    return true;
+                }
+                return false;
             }
+            None => return false,
         }
-        return false;
     }
 }
 
@@ -284,8 +289,8 @@ mod tests {
     #[test]
     fn machine() {
         let mut machine = Machine::new();
-        machine.start_context_id = Some("e0".to_string());
-        machine.start_element_id = Some("853429e2-0528-48b9-97b3-7725eafbb8b5".to_string());
+        machine.start_context_id = Some("853429e2-0528-48b9-97b3-7725eafbb8b5".to_string());
+        machine.start_element_id = Some("e0".to_string());
         assert_eq!(machine.contexts.len(), 0);
 
         for (key, model) in json::read::read(
