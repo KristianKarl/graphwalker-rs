@@ -94,13 +94,30 @@ fn main() {
                     .get_one::<String>("INPUT")
                     .expect("required"),
             );
-            let _models = match file_read_result {
+            let models = match file_read_result {
                 Ok(models) => models,
                 Err(error) => {
                     error!("{}", &error);
                     std::process::exit(exitcode::SOFTWARE);
                 }
             };
+
+            let mut machine = machine::Machine::new();
+            let res = machine.load_models(models);
+            if res.is_err() {
+                error!("{}", res.err().unwrap());
+                std::process::exit(exitcode::SOFTWARE);
+            }
+
+            match machine.walk() {
+                Ok(success) => println!("{success:?}"),
+                Err(error) => {
+                    error!("{}", &error);
+                    let json_str = serde_json::to_string_pretty(&machine.get_profile()).unwrap();
+                    println!("{}", json_str);
+                    std::process::exit(exitcode::SOFTWARE);
+                }
+            }
         }
 
         _ => {

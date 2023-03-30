@@ -1,4 +1,5 @@
 use rand::Rng;
+use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use graph::{Edge, Model, Models};
@@ -11,14 +12,14 @@ struct Generator {
     stop_conditions: Vec<StopCondition>,
 }
 
-#[derive(Debug, PartialEq)]
-struct Step {
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct Step {
     context_id: String,
     element_id: String,
 }
 
-#[derive(Debug, PartialEq)]
-struct Profile {
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct Profile {
     steps: Vec<Step>,
 }
 
@@ -42,7 +43,7 @@ enum MachineStatus {
     Ended,
 }
 
-struct Machine {
+pub struct Machine {
     contexts: HashMap<String, Context>,
     profile: Profile,
     current_context_id: Option<String>,
@@ -52,7 +53,7 @@ struct Machine {
 }
 
 impl Machine {
-    fn new() -> Machine {
+    pub fn new() -> Machine {
         Machine {
             contexts: HashMap::new(),
             profile: Profile::new(),
@@ -61,6 +62,10 @@ impl Machine {
             start_element_id: None,
             status: MachineStatus::NotStarted,
         }
+    }
+
+    pub fn get_profile(&self) -> Profile {
+        self.profile.clone()
     }
 
     fn is_visited(&self, context_id: String, element_id: String) -> bool {
@@ -112,7 +117,7 @@ impl Machine {
      * when a model in a context is fullfilled.
      * If the macine is not ready toi run, None is returned.
      */
-    fn has_next(&self) -> Option<bool> {
+    pub fn has_next(&self) -> Option<bool> {
         match self.get_fullfilment() {
             Some(full_filment) => {
                 if full_filment < 1. {
@@ -129,7 +134,7 @@ impl Machine {
      * Returns the next id of the element to be executed. If no more elements
      * found to be executed, None is returned.
      */
-    fn next(&mut self) -> Option<String> {
+    pub fn next(&mut self) -> Option<String> {
         /*
          * If machine is not started, we pick the `start_id` as the first element
          * to be executed.
@@ -279,7 +284,7 @@ impl Machine {
         }
     }
 
-    fn load_models(&mut self, models: Models) -> Result<Option<String>, &'static str> {
+    pub fn load_models(&mut self, models: Models) -> Result<Option<String>, &'static str> {
         for (key, model) in models.models {
             self.contexts.insert(
                 key.clone(),
@@ -307,6 +312,31 @@ impl Machine {
             None => Err("Did not find the starting element in any model"),
         }
     }
+
+    pub fn walk(&mut self) -> Result<&'static str, &'static str> {
+        loop {
+            match self.next() {
+                Some(_next_id) => match self.has_next() {
+                    Some(has_next) => {
+                        if !has_next {
+                            break;
+                        }
+                    }
+                    None => {
+                        break;
+                    }
+                },
+                None => {
+                    break;
+                }
+            }
+        }
+
+        if self.status != MachineStatus::Ended {
+            return Err("Walking the models did not end as expected.");
+        }
+        Ok("Walking the model ended in success")
+    }
 }
 
 #[cfg(test)]
@@ -314,6 +344,17 @@ mod tests {
     use super::*;
     use io::json;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn walk() {
+        let mut machine = Machine::new();
+        let res = machine.load_models(json::read::read(
+            "/home/krikar//dev/graphwalker-rs/crates/machine/tests/models/login.json",
+        ));
+        assert!(res.is_ok());
+        let res = machine.walk();
+        assert!(res.is_ok());
+    }
 
     #[test]
     fn machine() {

@@ -6,6 +6,8 @@ edition = "2021"
 
 [dependencies]
 graph = { path = "../graph" }
+serde = { version = "1.0.147", features = ["derive"] }
+serde_derive = "1.0.147"
 log = "0.4.17"
 rand = "0.8.5"
 
