@@ -39,7 +39,8 @@ fn offline_file_doesnt_exist() -> Result<(), Box<dyn std::error::Error>> {
 fn offline() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("graphwalker")?;
 
-    cmd.arg("offline").arg("/home/krikar//dev/graphwalker-rs/models/login.json");
+    cmd.arg("offline")
+        .arg("/home/krikar//dev/graphwalker-rs/models/login.json");
     cmd.assert().success();
 
     Ok(())
