@@ -507,14 +507,15 @@ impl Machine {
          */
         match self.start_pos.context_id {
             Some(_) => Ok(()),
-            None => match self.start_pos.element_id {
-                Some(_) => Ok(()),
-                None => {
+            None => {
+                if let Some(_) = self.start_pos.element_id {
+                    Ok(())
+                } else {
                     let msg = "Could not determine what model to start in. Is the startElementId correct?".to_string();
                     log::error!("{}", msg);
                     Err(msg)
                 }
-            },
+            }
         }
     }
 
@@ -595,26 +596,23 @@ mod tests {
 
         let mut path = Vec::new();
         loop {
-            match machine.next_step() {
-                Ok(next_pos) => {
-                    path.push(next_pos);
-                    assert_eq!(machine.status, MachineStatus::Running);
+            if let Ok(next_pos) = machine.next_step() {
+                path.push(next_pos);
+                assert_eq!(machine.status, MachineStatus::Running);
 
-                    match machine.has_next() {
-                        Some(has_next) => {
-                            if !has_next {
-                                break;
-                            }
-                        }
-                        None => {
+                match machine.has_next() {
+                    Some(has_next) => {
+                        if !has_next {
                             break;
                         }
                     }
+                    None => {
+                        break;
+                    }
                 }
-                Err(_) => {
-                    assert_eq!(machine.status, MachineStatus::Ended);
-                    break;
-                }
+            } else {
+                assert_eq!(machine.status, MachineStatus::Ended);
+                break;
             }
         }
     }
