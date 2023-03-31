@@ -500,20 +500,16 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn check_model_id_test() {
+    fn walk_multiple_model() {
         let mut machine = Machine::new();
-        let res = machine.load_models(json::read::read(
-            "/home/krikar/dev/graphwalker-rs/models/simpleMultiModel.json",
-        ));
-        assert!(res.is_err());
+        let res = machine.load_models(json::read::read("../../models/simpleMultiModel.json"));
+        assert!(res.is_ok());
     }
 
     #[test]
-    fn walk() {
+    fn walk_single_model() {
         let mut machine = Machine::new();
-        let res = machine.load_models(json::read::read(
-            "/home/krikar/dev/graphwalker-rs/models/simple.json",
-        ));
+        let res = machine.load_models(json::read::read("../../models/simpleSingleModel.json"));
         assert!(res.is_ok());
         let res = machine.walk();
         assert!(res.is_ok(), "{:?}", Err::<(), Result<(), &str>>(res));
@@ -523,9 +519,7 @@ mod tests {
     fn machine() {
         let mut machine = Machine::new();
         assert!(machine
-            .load_models(json::read::read(
-                "/home/krikar/dev/graphwalker-rs/crates/machine/tests/models/login.json",
-            ))
+            .load_models(json::read::read("../../models/login.json",))
             .is_ok());
 
         assert_eq!(machine.contexts.len(), 1);
