@@ -39,7 +39,7 @@ fn convert_file_doesnt_exist() -> Result<(), Box<dyn std::error::Error>> {
 fn convert_json_to_dot() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("graphwalker")?;
 
-    cmd.arg("convert").arg("tests/models/login.json");
+    cmd.arg("convert").arg("../../models/login.json");
     cmd.arg("--format").arg("dot");
     cmd.assert()
         .stdout(predicate::str::contains("digraph Login"));
@@ -51,7 +51,7 @@ fn convert_json_to_dot() -> Result<(), Box<dyn std::error::Error>> {
 fn convert_dot_to_json() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("graphwalker")?;
 
-    cmd.arg("convert").arg("tests/models/login.dot");
+    cmd.arg("convert").arg("../../models/dot/login.dot");
     cmd.arg("--format").arg("json");
     cmd.assert()
         .stderr(predicate::str::contains("Feature not implemented"));
@@ -63,7 +63,7 @@ fn convert_dot_to_json() -> Result<(), Box<dyn std::error::Error>> {
 fn input_file_format_not_yet_implemented() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("graphwalker")?;
 
-    cmd.arg("convert").arg("tests/models/login.graphml");
+    cmd.arg("convert").arg("../../models/graphml/login.graphml");
     cmd.arg("--format").arg("json");
     cmd.assert()
         .failure()
@@ -76,7 +76,7 @@ fn input_file_format_not_yet_implemented() -> Result<(), Box<dyn std::error::Err
 fn ouput_file_format_not_yet_implemented() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("graphwalker")?;
 
-    cmd.arg("convert").arg("tests/models/login.json");
+    cmd.arg("convert").arg("../../models/login.json");
     cmd.arg("--format").arg("graphml");
     cmd.assert().failure().stderr(predicate::str::contains(
         "Output format for file is not yet implemented",

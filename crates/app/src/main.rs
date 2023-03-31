@@ -75,7 +75,14 @@ fn main() {
             if let Some(format) = convert_matches.get_one::<String>("format") {
                 match format.as_str() {
                     "json" => {
-                        io::json::write::write(models);
+                        let res = io::json::write::write(models);
+                        match res {
+                            Ok(_) => {}
+                            Err(why) => {
+                                error!("{:?}", why);
+                                std::process::exit(exitcode::SOFTWARE);
+                            }
+                        }
                     }
                     "dot" => {
                         io::dot::write::write(models);
@@ -94,13 +101,39 @@ fn main() {
                     .get_one::<String>("INPUT")
                     .expect("required"),
             );
-            let _models = match file_read_result {
+            let models = match file_read_result {
                 Ok(models) => models,
                 Err(error) => {
                     error!("{}", &error);
                     std::process::exit(exitcode::SOFTWARE);
                 }
             };
+
+            let mut machine = machine::Machine::new();
+            let res = machine.load_models(models);
+            if res.is_err() {
+                error!("{:?}", res.err());
+                std::process::exit(exitcode::SOFTWARE);
+            }
+
+            match machine.walk() {
+                Ok(_success) => {
+                    let res = serde_json::to_string_pretty(&machine.get_profile());
+                    match res {
+                        Ok(json_str) => {
+                            println!("{json_str}");
+                        }
+                        Err(why) => {
+                            error!("{:?}", why);
+                            std::process::exit(exitcode::SOFTWARE);
+                        }
+                    }
+                }
+                Err(error) => {
+                    error!("{}", &error);
+                    std::process::exit(exitcode::SOFTWARE);
+                }
+            }
         }
 
         _ => {

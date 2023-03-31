@@ -1,28 +1,52 @@
 use graph::Models;
 
 pub fn write(models: Models) {
-    for model in models.models {
-        println!("digraph {} {{", model.name);
+    for i in models.models {
+        let model = i.1;
+        println!(
+            "digraph {} {{",
+            model.name.clone().expect("Expected a model name")
+        );
 
-        for edge in model.edges.iter() {
+        for j in model.edges {
+            let edge = j.1;
             print!(
                 "  {} -> {} [label=\"{}",
                 model
-                    .get_vertex(edge.source_vertex_id.clone())
-                    .unwrap()
-                    .name,
+                    .vertices
+                    .get(
+                        &edge
+                            .source_vertex_id
+                            .clone()
+                            .expect("Expexted source vertex id")
+                    )
+                    .expect("Expexted a source vertex")
+                    .name
+                    .clone()
+                    .expect("Expexted source vertex name"),
                 model
-                    .get_vertex(edge.target_vertex_id.clone())
-                    .unwrap()
-                    .name,
-                edge.name
+                    .vertices
+                    .get(
+                        &edge
+                            .target_vertex_id
+                            .clone()
+                            .expect("Expexted a target vertex id")
+                    )
+                    .expect("Expexted a target vertex")
+                    .name
+                    .clone()
+                    .expect("Expexted a target vertex name"),
+                edge.name.clone().expect("Expexted an edge name")
             );
-            if !edge.guard.is_empty() {
-                print!("\\n[{}]", edge.guard);
+            if edge.guard.is_some() {
+                print!(
+                    "\\n[{}]",
+                    edge.guard.clone().expect("Expexted a guard for an edge")
+                );
             }
             if !edge.actions.is_empty() {
-                for action in edge.actions.iter() {
-                    print!("\\n{}", action);
+                for action in &edge.actions {
+                    print!("\\n{action}");
                 }
             }
             println!("\"]");

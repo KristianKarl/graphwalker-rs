@@ -40,15 +40,6 @@
                         "description": "A successful login is expected.\nThe user is presented with the initial view of the client.",
                         "y": 457
                     }
-                },
-                {
-                    "id": "Start",
-                    "actions": [],
-                    "requirements": [],
-                    "properties": {
-                        "x": -226.30088495575222,
-                        "y": 6.150442477876107
-                    }
                 }
             ],
             "edges": [
@@ -62,7 +53,7 @@
                     "properties": {
                         "description": "Remove all cache and user settings from file system."
                     },
-                    "sourceVertexId": "Start",
+                    "sourceVertexId": "n1",
                     "targetVertexId": "n1"
                 },
                 {
