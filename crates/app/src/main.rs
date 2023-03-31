@@ -75,7 +75,14 @@ fn main() {
             if let Some(format) = convert_matches.get_one::<String>("format") {
                 match format.as_str() {
                     "json" => {
-                        io::json::write::write(models);
+                        let res = io::json::write::write(models);
+                        match res {
+                            Ok(_) => {}
+                            Err(why) => {
+                                error!("{:?}", why);
+                                std::process::exit(exitcode::SOFTWARE);
+                            }
+                        }
                     }
                     "dot" => {
                         io::dot::write::write(models);
@@ -111,8 +118,16 @@ fn main() {
 
             match machine.walk() {
                 Ok(_success) => {
-                    let json_str = serde_json::to_string_pretty(&machine.get_profile()).unwrap();
-                    println!("{json_str}");
+                    let res = serde_json::to_string_pretty(&machine.get_profile());
+                    match res {
+                        Ok(json_str) => {
+                            println!("{json_str}");
+                        }
+                        Err(why) => {
+                            error!("{:?}", why);
+                            std::process::exit(exitcode::SOFTWARE);
+                        }
+                    }
                 }
                 Err(error) => {
                     error!("{}", &error);

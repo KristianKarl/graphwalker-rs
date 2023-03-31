@@ -24,7 +24,7 @@ mod models_to_hash {
     {
         let mut map = HashMap::new();
         for model in Vec::<Model>::deserialize(deserializer)? {
-            map.insert(model.id.clone().unwrap(), model);
+            map.insert(model.id.clone().expect("Expected a model id"), model);
         }
         Ok(map)
     }
@@ -50,7 +50,7 @@ mod vertices_to_hash {
     {
         let mut map = HashMap::new();
         for vertex in Vec::<Vertex>::deserialize(deserializer)? {
-            map.insert(vertex.id.clone().unwrap(), vertex);
+            map.insert(vertex.id.clone().expect("Expected a vertex id"), vertex);
         }
         Ok(map)
     }
@@ -77,7 +77,7 @@ mod edges_to_hash {
     {
         let mut map = HashMap::new();
         for edge in Vec::<Edge>::deserialize(deserializer)? {
-            map.insert(edge.id.clone().unwrap(), edge);
+            map.insert(edge.id.clone().expect("Expeted an edge id"), edge);
         }
         Ok(map)
     }
@@ -106,7 +106,8 @@ pub struct Model {
 }
 
 impl Model {
-    #[must_use] pub fn new() -> Self {
+    #[must_use]
+    pub fn new() -> Self {
         Self {
             id: None,
             name: None,
@@ -117,10 +118,9 @@ impl Model {
         }
     }
 
-    #[must_use] pub fn has_id(&self, id: String) -> bool {
-        if self.edges.contains_key(&id) {
-            return true;
-        } else if self.vertices.contains_key(&id) {
+    #[must_use]
+    pub fn has_id(&self, id: String) -> bool {
+        if self.edges.contains_key(&id) || self.vertices.contains_key(&id) {
             return true;
         }
         false
@@ -131,7 +131,12 @@ impl Model {
             Some(i) => {
                 let mut out_edges: Vec<String> = Vec::new();
                 for (key, edge) in &self.edges {
-                    if edge.source_vertex_id.clone().unwrap() == i {
+                    if edge
+                        .source_vertex_id
+                        .clone()
+                        .expect("Expected a source vertex id")
+                        == i
+                    {
                         out_edges.push(key.clone().to_string());
                     }
                 }
@@ -157,7 +162,8 @@ pub struct Vertex {
 }
 
 impl Vertex {
-    #[must_use] pub fn new() -> Self {
+    #[must_use]
+    pub fn new() -> Self {
         Self {
             id: None,
             name: None,
@@ -167,7 +173,8 @@ impl Vertex {
         }
     }
 
-    #[must_use] pub fn id(mut self, id: String) -> Self {
+    #[must_use]
+    pub fn id(mut self, id: String) -> Self {
         self.id = Some(id);
         self
     }
@@ -192,7 +199,8 @@ pub struct Edge {
 }
 
 impl Edge {
-    #[must_use] pub fn new() -> Self {
+    #[must_use]
+    pub fn new() -> Self {
         Self {
             id: None,
             name: None,
@@ -204,17 +212,20 @@ impl Edge {
         }
     }
 
-    #[must_use] pub fn id(mut self, id: String) -> Self {
+    #[must_use]
+    pub fn id(mut self, id: String) -> Self {
         self.id = Some(id);
         self
     }
 
-    #[must_use] pub fn source_vertex_id(mut self, id: String) -> Self {
+    #[must_use]
+    pub fn source_vertex_id(mut self, id: String) -> Self {
         self.source_vertex_id = Some(id);
         self
     }
 
-    #[must_use] pub fn target_vertex_id(mut self, id: String) -> Self {
+    #[must_use]
+    pub fn target_vertex_id(mut self, id: String) -> Self {
         self.target_vertex_id = Some(id);
         self
     }

@@ -15,15 +15,11 @@ pub fn read(input_file: &str) -> Result<Models, &str> {
 
     if std::path::Path::new(input_file).exists() {
         let suffix = get_extension_from_filename(input_file);
-        trace!("Suffix: {}", suffix.unwrap());
+        trace!("Suffix: {:?}", suffix);
 
         match suffix {
-            Some("json") => {
-                Ok(json::read::read(input_file))
-            }
-            Some("dot") => {
-                Ok(dot::read::read(input_file))
-            }
+            Some("json") => Ok(json::read::read(input_file)),
+            Some("dot") => Ok(dot::read::read(input_file)),
             _ => {
                 debug!("Suffix for file is not yet implemented: {}", input_file);
                 Err("File type is not implemented")
