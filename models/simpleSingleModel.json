@@ -1,6 +1,10 @@
 {
     "models": [
         {
+            "generator": "random(edge_coverage(100))",
+            "id": "m1",
+            "name": "SimpleModel",
+            "startElementId": "v1",
             "edges": [
                 {
                     "id": "e2",
@@ -21,10 +25,6 @@
                     "targetVertexId": "v1"
                 }
             ],
-            "generator": "random(edge_coverage(100))",
-            "id": "m1",
-            "name": "SimpleModel",
-            "startElementId": "v1",
             "vertices": [
                 {
                     "id": "v1",
@@ -40,7 +40,5 @@
                 }
             ]
         }
-    ],
-    "selectedModelIndex": 0,
-    "selectedElementId": "v1"
+    ]
 }

@@ -117,18 +117,13 @@ impl Model {
         }
     }
 
-    pub fn has_id(&self, id: Option<String>) -> bool {
-        match id {
-            Some(i) => {
-                if self.edges.contains_key(&i) {
-                    return true;
-                } else if self.vertices.contains_key(&i) {
-                    return true;
-                }
-                return false;
-            }
-            None => return false,
+    pub fn has_id(&self, id: String) -> bool {
+        if self.edges.contains_key(&id) {
+            return true;
+        } else if self.vertices.contains_key(&id) {
+            return true;
         }
+        return false;
     }
 
     pub fn out_edges(&mut self, id: Option<String>) -> Option<Vec<String>> {
@@ -289,13 +284,13 @@ mod tests {
     #[test]
     fn has_id_test() {
         let model = create_model();
-        assert!(model.has_id(Some("a".to_string())));
-        assert!(model.has_id(Some("c".to_string())));
-        assert!(model.has_id(Some("b->c".to_string())));
+        assert!(model.has_id("a".to_string()));
+        assert!(model.has_id("c".to_string()));
+        assert!(model.has_id("b->c".to_string()));
 
         // Negative tests
-        assert!(!model.has_id(None));
-        assert!(!model.has_id(Some("x".to_string())));
+        assert!(!model.has_id("".to_string()));
+        assert!(!model.has_id("x".to_string()));
     }
 
     #[test]

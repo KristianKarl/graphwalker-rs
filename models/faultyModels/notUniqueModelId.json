@@ -1,0 +1,87 @@
+{
+    "description": "These models has the same model id, which is incorrect",
+    "models": [
+        {
+            "generator": "random(edge_coverage(100))",
+            "id": "m1",
+            "name": "Model 1",
+            "startElementId": "v1",
+            "edges": [
+                {
+                    "id": "e2",
+                    "name": "e2",
+                    "sourceVertexId": "v1",
+                    "targetVertexId": "v2"
+                },
+                {
+                    "id": "e3",
+                    "name": "e3",
+                    "sourceVertexId": "v2",
+                    "targetVertexId": "v3"
+                },
+                {
+                    "id": "e1",
+                    "name": "e1",
+                    "sourceVertexId": "v3",
+                    "targetVertexId": "v1"
+                }
+            ],
+            "vertices": [
+                {
+                    "id": "v1",
+                    "name": "v1"
+                },
+                {
+                    "id": "v2",
+                    "name": "v2"
+                },
+                {
+                    "id": "v3",
+                    "name": "v3",
+                    "sharedState": "A SHARED STATE"
+                }
+            ]
+        },
+        {
+            "generator": "random(edge_coverage(100))",
+            "id": "m1",
+            "name": "Model 2",
+            "startElementId": "v1",
+            "edges": [
+                {
+                    "id": "e2",
+                    "name": "e2",
+                    "sourceVertexId": "v1",
+                    "targetVertexId": "v2"
+                },
+                {
+                    "id": "e3",
+                    "name": "e3",
+                    "sourceVertexId": "v2",
+                    "targetVertexId": "v3"
+                },
+                {
+                    "id": "e1",
+                    "name": "e1",
+                    "sourceVertexId": "v3",
+                    "targetVertexId": "v1"
+                }
+            ],
+            "vertices": [
+                {
+                    "id": "v1",
+                    "name": "v1"
+                },
+                {
+                    "id": "v2",
+                    "name": "v2",
+                    "sharedState": "A SHARED STATE"
+                },
+                {
+                    "id": "v3",
+                    "name": "v3"
+                }
+            ]
+        }
+    ]
+}
