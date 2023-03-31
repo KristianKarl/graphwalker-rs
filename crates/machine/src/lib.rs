@@ -82,19 +82,16 @@ fn step(
     unvisited_elements: &mut HashMap<String, u32>,
     profile: &mut Profile,
 ) -> Result<(), String> {
-    match unvisited_elements.get(&(step.context_id.clone() + &step.element_id)) {
-        Some(value) => {
-            let visited = value + 1;
-            unvisited_elements.insert(step.context_id.clone() + &step.element_id, visited);
-        }
-        None => {
-            let msg = format!(
-                "Expected the key {}{} to be found in unvisited_elements",
-                step.context_id, step.element_id
-            );
-            log::error!("{}", msg);
-            return Err(msg);
-        }
+    if let Some(value) = unvisited_elements.get(&(step.context_id.clone() + &step.element_id)) {
+        let visited = value + 1;
+        unvisited_elements.insert(step.context_id.clone() + &step.element_id, visited);
+    } else {
+        let msg = format!(
+            "Expected the key {}{} to be found in unvisited_elements",
+            step.context_id, step.element_id
+        );
+        log::error!("{}", msg);
+        return Err(msg);
     }
     profile.push(step);
     log::trace!("Elements visited{:?}", unvisited_elements);
@@ -233,162 +230,150 @@ impl Machine {
             }
 
             let spare_list = self.contexts.clone();
-            match self.contexts.get_mut(
+            if let Some(context) = self.contexts.get_mut(
                 &self
                     .current_pos
                     .context_id
                     .clone()
                     .expect("Expected current context id"),
             ) {
-                Some(context) => {
-                    log::trace!("Current model and element are: {:?}", self.current_pos);
+                log::trace!("Current model and element are: {:?}", self.current_pos);
 
-                    // Is the current element an edge, and does is exist in the mdoel?
-                    match context.model.edges.get(
-                        &self
-                            .current_pos
-                            .element_id
-                            .clone()
-                            .expect("Expected current element id"),
-                    ) {
-                        None => {}
-                        Some(e) => {
-                            self.current_pos.element_id = Some(
-                                e.target_vertex_id
+                // Is the current element an edge, and does is exist in the mdoel?
+                match context.model.edges.get(
+                    &self
+                        .current_pos
+                        .element_id
+                        .clone()
+                        .expect("Expected current element id"),
+                ) {
+                    None => {}
+                    Some(e) => {
+                        self.current_pos.element_id = Some(
+                            e.target_vertex_id
+                                .clone()
+                                .expect("Expected target vertex id"),
+                        );
+
+                        match step(
+                            Step {
+                                context_id: self
+                                    .current_pos
+                                    .context_id
                                     .clone()
-                                    .expect("Expected target vertex id"),
-                            );
-
-                            match step(
-                                Step {
-                                    context_id: self
-                                        .current_pos
-                                        .context_id
-                                        .clone()
-                                        .expect("Expected current context id"),
-                                    element_id: self
-                                        .current_pos
-                                        .element_id
-                                        .clone()
-                                        .expect("Expected currentelement id"),
-                                },
-                                &mut self.unvisited_elements,
-                                &mut self.profile,
-                            ) {
-                                Err(why) => return Err(why),
-                                Ok(()) => return Ok(Some(self.current_pos.clone())),
-                            }
+                                    .expect("Expected current context id"),
+                                element_id: self
+                                    .current_pos
+                                    .element_id
+                                    .clone()
+                                    .expect("Expected currentelement id"),
+                            },
+                            &mut self.unvisited_elements,
+                            &mut self.profile,
+                        ) {
+                            Err(why) => return Err(why),
+                            Ok(()) => return Ok(Some(self.current_pos.clone())),
                         }
                     }
+                }
+
+                /*
+                 * Is the current element a vertex, and does is exist in the mdoel?
+                 */
+                if context.model.vertices.contains_key(
+                    &self
+                        .current_pos
+                        .element_id
+                        .clone()
+                        .expect("Expected current element id"),
+                ) {
+                    let mut candidate_elements: Vec<(String, String)> = Vec::new();
 
                     /*
-                     * Is the current element a vertex, and does is exist in the mdoel?
+                     * First check if the current vertex is a shared vertex.
                      */
-                    if context.model.vertices.contains_key(
+
+                    if let Some(vertex) = context.model.vertices.get(
                         &self
                             .current_pos
                             .element_id
                             .clone()
                             .expect("Expected current element id"),
                     ) {
-                        let mut candidate_elements: Vec<(String, String)> = Vec::new();
-
-                        /*
-                         * First check if the current vertex is a shared vertex.
-                         */
-
-                        if let Some(vertex) = context.model.vertices.get(
-                            &self
-                                .current_pos
-                                .element_id
-                                .clone()
-                                .expect("Expected current element id"),
-                        ) {
-                            if vertex.shared_state.is_some() {
-                                for (_key, spare_list_context) in spare_list {
-                                    log::trace!(
-                                        "Checking in model: {:?} for {:?}",
-                                        spare_list_context.model.name.as_deref(),
-                                        vertex.shared_state.as_deref()
-                                    );
-                                    for other_vertex in spare_list_context.model.vertices.values() {
-                                        if other_vertex.shared_state.as_deref()
-                                            == vertex.shared_state.as_deref()
-                                        {
-                                            candidate_elements.push((
-                                                spare_list_context.id.clone(),
-                                                other_vertex
-                                                    .id
-                                                    .clone()
-                                                    .expect("Expected the other vertex id"),
-                                            ));
-                                            log::trace!(
-                                                "Adding shared state: {:?}",
-                                                candidate_elements.last()
-                                            );
-                                        }
+                        if vertex.shared_state.is_some() {
+                            for (_key, spare_list_context) in spare_list {
+                                log::trace!(
+                                    "Checking in model: {:?} for {:?}",
+                                    spare_list_context.model.name.as_deref(),
+                                    vertex.shared_state.as_deref()
+                                );
+                                for other_vertex in spare_list_context.model.vertices.values() {
+                                    if other_vertex.shared_state.as_deref()
+                                        == vertex.shared_state.as_deref()
+                                    {
+                                        candidate_elements.push((
+                                            spare_list_context.id.clone(),
+                                            other_vertex
+                                                .id
+                                                .clone()
+                                                .expect("Expected the other vertex id"),
+                                        ));
+                                        log::trace!(
+                                            "Adding shared state: {:?}",
+                                            candidate_elements.last()
+                                        );
                                     }
                                 }
-                                log::trace!("Matching shared states: {}", candidate_elements.len());
                             }
+                            log::trace!("Matching shared states: {}", candidate_elements.len());
                         }
+                    }
 
-                        match context.model.out_edges(self.current_pos.element_id.clone()) {
-                            None => {}
-                            Some(list) => {
-                                for element_id in list {
-                                    candidate_elements.push((context.id.clone(), element_id));
-                                }
-                            }
-                        }
-
-                        log::trace!("Candidate list: {:?}", candidate_elements);
-
-                        let mut rng = rand::thread_rng();
-                        let index = rng.gen_range(0..candidate_elements.len());
-                        match candidate_elements.get(index) {
-                            Some((ctx_id, elem_id)) => {
-                                log::trace!(
-                                    "Selected candidate: {}{}, using index {}",
-                                    ctx_id,
-                                    elem_id,
-                                    index
-                                );
-
-                                self.current_pos.context_id = Some(ctx_id.clone());
-                                self.current_pos.element_id = Some(elem_id.clone());
-
-                                match step(
-                                    Step {
-                                        context_id: ctx_id.clone(),
-                                        element_id: elem_id.clone(),
-                                    },
-                                    &mut self.unvisited_elements,
-                                    &mut self.profile,
-                                ) {
-                                    Err(why) => return Err(why),
-                                    Ok(()) => return Ok(Some(self.current_pos.clone())),
-                                }
-                            }
-                            None => {
-                                let msg =
-                                    format!("Random selected index: {index}, resulted in failure");
-                                log::error!("{}", msg);
-                                return Err(msg);
+                    match context.model.out_edges(self.current_pos.element_id.clone()) {
+                        None => {}
+                        Some(list) => {
+                            for element_id in list {
+                                candidate_elements.push((context.id.clone(), element_id));
                             }
                         }
                     }
-                    self.status = MachineStatus::Ended;
-                    let msg = "Machine is exhausted".to_string();
-                    log::error!("{}", msg);
-                    return Err(msg);
+
+                    log::trace!("Candidate list: {:?}", candidate_elements);
+
+                    let mut rng = rand::thread_rng();
+                    let index = rng.gen_range(0..candidate_elements.len());
+                    if let Some((ctx_id, elem_id)) = candidate_elements.get(index) {
+                        log::trace!(
+                            "Selected candidate: {}{}, using index {}",
+                            ctx_id,
+                            elem_id,
+                            index
+                        );
+
+                        self.current_pos.context_id = Some(ctx_id.clone());
+                        self.current_pos.element_id = Some(elem_id.clone());
+
+                        match step(
+                            Step {
+                                context_id: ctx_id.clone(),
+                                element_id: elem_id.clone(),
+                            },
+                            &mut self.unvisited_elements,
+                            &mut self.profile,
+                        ) {
+                            Err(why) => return Err(why),
+                            Ok(()) => return Ok(Some(self.current_pos.clone())),
+                        }
+                    } else {
+                        let msg = format!("Random selected index: {index}, resulted in failure");
+                        log::error!("{}", msg);
+                        return Err(msg);
+                    }
                 }
-                None => {
-                    self.status = MachineStatus::Ended;
-                    let msg = "Machine is exhausted".to_string();
-                    log::error!("{}", msg);
-                    return Err(msg);
-                }
+                self.status = MachineStatus::Ended;
+                let msg = "Machine is exhausted".to_string();
+                log::error!("{}", msg);
+                return Err(msg);
             }
         } else if self.status == MachineStatus::Ended {
             let msg = "Machine is exhausted".to_string();
@@ -555,14 +540,20 @@ mod tests {
     #[test]
     fn walk_multiple_model() {
         let mut machine = Machine::new();
-        let res = machine.load_models(json::read::read("../../models/simpleMultiModel.json"));
+        let res = machine.load_models(
+            json::read::read("../../models/simpleMultiModel.json")
+                .expect("Expexted the test file to be loaded"),
+        );
         assert!(res.is_ok());
     }
 
     #[test]
     fn walk_single_model() {
         let mut machine = Machine::new();
-        let res = machine.load_models(json::read::read("../../models/simpleSingleModel.json"));
+        let res = machine.load_models(
+            json::read::read("../../models/simpleSingleModel.json")
+                .expect("Expexted the test file to be loaded"),
+        );
         assert!(res.is_ok());
         let res = machine.walk();
         assert!(res.is_ok(), "{:?}", Err::<(), Result<(), &str>>(res));
@@ -572,7 +563,10 @@ mod tests {
     fn machine() {
         let mut machine = Machine::new();
         assert!(machine
-            .load_models(json::read::read("../../models/login.json",))
+            .load_models(
+                json::read::read("../../models/login.json")
+                    .expect("Expexted the test file to be loaded")
+            )
             .is_ok());
 
         assert_eq!(machine.contexts.len(), 1);

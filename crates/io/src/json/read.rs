@@ -3,12 +3,21 @@ use log::debug;
 use std::fs;
 
 #[must_use]
-pub fn read(input_file: &str) -> Models {
+pub fn read(input_file: &str) -> Result<Models, String> {
     debug!("{}", input_file);
-    let json = fs::read_to_string(input_file)
-        .unwrap_or_else(|_| panic!("Unable to read file: {input_file}"));
-    let models: Models = serde_json::from_str(&json).expect("Unable to parse");
-    models
+    let res = fs::read_to_string(input_file);
+    match res {
+        Ok(json_str) => {
+            let models: Models = serde_json::from_str(&json_str).expect(&format!("Unable to parse file: {}", input_file));
+            Ok(models)
+        }
+        Err(why) => {
+            log::error!("{:?}", why);
+            Err(why.to_string())
+        }
+    }
+    
+    
 }
 
 #[cfg(test)]
