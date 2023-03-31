@@ -508,7 +508,7 @@ impl Machine {
         match self.start_pos.context_id {
             Some(_) => Ok(()),
             None => {
-                if let Some(_) = self.start_pos.element_id {
+                if self.start_pos.element_id.is_some() {
                     Ok(())
                 } else {
                     let msg = "Could not determine what model to start in. Is the startElementId correct?".to_string();
