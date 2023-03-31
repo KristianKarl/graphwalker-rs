@@ -2,12 +2,12 @@ use graph::Models;
 use log::debug;
 use std::fs;
 
-pub fn read(input_file: &str) -> Models {
+#[must_use] pub fn read(input_file: &str) -> Models {
     debug!("{}", input_file);
     let json = fs::read_to_string(input_file)
-        .expect(format!("Unable to read file: {}", input_file).as_str());
+        .unwrap_or_else(|_| panic!("Unable to read file: {input_file}"));
     let models: Models = serde_json::from_str(&json).expect("Unable to parse");
-    return models;
+    models
 }
 
 #[cfg(test)]

@@ -12,7 +12,6 @@ pub fn write(models: Models) {
                 model
                     .vertices
                     .get(&edge.source_vertex_id.clone().unwrap())
-                    .clone()
                     .unwrap()
                     .name
                     .clone()
@@ -20,19 +19,18 @@ pub fn write(models: Models) {
                 model
                     .vertices
                     .get(&edge.target_vertex_id.clone().unwrap())
-                    .clone()
                     .unwrap()
                     .name
                     .clone()
                     .unwrap(),
                 edge.name.clone().unwrap()
             );
-            if !edge.guard.is_none() {
+            if edge.guard.is_some() {
                 print!("\\n[{}]", edge.guard.clone().unwrap());
             }
             if !edge.actions.is_empty() {
-                for action in edge.actions.iter() {
-                    print!("\\n{}", action);
+                for action in &edge.actions {
+                    print!("\\n{action}");
                 }
             }
             println!("\"]");

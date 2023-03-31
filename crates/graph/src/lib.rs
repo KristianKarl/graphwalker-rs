@@ -83,13 +83,13 @@ mod edges_to_hash {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Models {
     #[serde(with = "models_to_hash")]
     pub models: HashMap<String, Model>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Model {
     pub id: Option<String>,
@@ -106,8 +106,8 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn new() -> Model {
-        Model {
+    #[must_use] pub fn new() -> Self {
+        Self {
             id: None,
             name: None,
             vertices: HashMap::new(),
@@ -117,13 +117,13 @@ impl Model {
         }
     }
 
-    pub fn has_id(&self, id: String) -> bool {
+    #[must_use] pub fn has_id(&self, id: String) -> bool {
         if self.edges.contains_key(&id) {
             return true;
         } else if self.vertices.contains_key(&id) {
             return true;
         }
-        return false;
+        false
     }
 
     pub fn out_edges(&mut self, id: Option<String>) -> Option<Vec<String>> {
@@ -135,14 +135,14 @@ impl Model {
                         out_edges.push(key.clone().to_string());
                     }
                 }
-                return Some(out_edges);
+                Some(out_edges)
             }
-            None => return None,
+            None => None,
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Vertex {
     pub id: Option<String>,
@@ -157,8 +157,8 @@ pub struct Vertex {
 }
 
 impl Vertex {
-    pub fn new() -> Vertex {
-        Vertex {
+    #[must_use] pub fn new() -> Self {
+        Self {
             id: None,
             name: None,
             shared_state: None,
@@ -167,13 +167,13 @@ impl Vertex {
         }
     }
 
-    pub fn id(mut self, id: String) -> Vertex {
+    #[must_use] pub fn id(mut self, id: String) -> Self {
         self.id = Some(id);
         self
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Edge {
     pub id: Option<String>,
@@ -192,8 +192,8 @@ pub struct Edge {
 }
 
 impl Edge {
-    pub fn new() -> Edge {
-        Edge {
+    #[must_use] pub fn new() -> Self {
+        Self {
             id: None,
             name: None,
             source_vertex_id: None,
@@ -204,17 +204,17 @@ impl Edge {
         }
     }
 
-    pub fn id(mut self, id: String) -> Edge {
+    #[must_use] pub fn id(mut self, id: String) -> Self {
         self.id = Some(id);
         self
     }
 
-    pub fn source_vertex_id(mut self, id: String) -> Edge {
+    #[must_use] pub fn source_vertex_id(mut self, id: String) -> Self {
         self.source_vertex_id = Some(id);
         self
     }
 
-    pub fn target_vertex_id(mut self, id: String) -> Edge {
+    #[must_use] pub fn target_vertex_id(mut self, id: String) -> Self {
         self.target_vertex_id = Some(id);
         self
     }
@@ -289,7 +289,7 @@ mod tests {
         assert!(model.has_id("b->c".to_string()));
 
         // Negative tests
-        assert!(!model.has_id("".to_string()));
+        assert!(!model.has_id(String::new()));
         assert!(!model.has_id("x".to_string()));
     }
 

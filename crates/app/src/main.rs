@@ -105,14 +105,14 @@ fn main() {
             let mut machine = machine::Machine::new();
             let res = machine.load_models(models);
             if res.is_err() {
-                error!("{}", res.err().unwrap());
+                error!("{:?}", res.err());
                 std::process::exit(exitcode::SOFTWARE);
             }
 
             match machine.walk() {
                 Ok(_success) => {
                     let json_str = serde_json::to_string_pretty(&machine.get_profile()).unwrap();
-                    println!("{}", json_str);
+                    println!("{json_str}");
                 }
                 Err(error) => {
                     error!("{}", &error);

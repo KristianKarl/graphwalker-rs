@@ -12,24 +12,24 @@ struct Generator {
     stop_conditions: Vec<StopCondition>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Step {
     context_id: String,
     element_id: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Profile {
     steps: Vec<Step>,
 }
 
 impl Profile {
-    fn new() -> Profile {
-        Profile { steps: Vec::new() }
+    fn new() -> Self {
+        Self { steps: Vec::new() }
     }
 
     fn push(&mut self, step: Step) {
-        log::trace!("{:?}", step.clone());
+        log::trace!("{:?}", step);
         self.steps.push(step);
     }
 }
@@ -54,8 +54,8 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn new() -> Position {
-        Position {
+    #[must_use] pub fn new() -> Self {
+        Self {
             context_id: None,
             element_id: None,
         }
@@ -75,10 +75,10 @@ fn step(
     unvisited_elements: &mut HashMap<String, u32>,
     profile: &mut Profile,
 ) -> Result<(), String> {
-    match unvisited_elements.get(&(step.context_id.clone() + &step.element_id.clone())) {
+    match unvisited_elements.get(&(step.context_id.clone() + &step.element_id)) {
         Some(value) => {
             let visited = value + 1;
-            unvisited_elements.insert(step.context_id.clone() + &step.element_id.clone(), visited);
+            unvisited_elements.insert(step.context_id.clone() + &step.element_id, visited);
         }
         None => {
             let msg = format!(
@@ -95,8 +95,8 @@ fn step(
 }
 
 impl Machine {
-    pub fn new() -> Machine {
-        Machine {
+    #[must_use] pub fn new() -> Self {
+        Self {
             contexts: HashMap::new(),
             profile: Profile::new(),
             current_pos: Position::new(),
@@ -106,7 +106,7 @@ impl Machine {
         }
     }
 
-    pub fn get_profile(&self) -> Profile {
+    #[must_use] pub fn get_profile(&self) -> Profile {
         self.profile.clone()
     }
 
@@ -125,11 +125,10 @@ impl Machine {
             .unvisited_elements
             .iter()
             .filter(|(_key, visits)| visits > &&0)
-            .collect::<Vec<_>>()
-            .len();
+            .count();
 
         log::trace!("Visited elements: {}/{}", visited_count, element_count);
-        return Some(visited_count as f32 / element_count as f32);
+        Some(visited_count as f32 / element_count as f32)
     }
 
     /**
@@ -142,13 +141,13 @@ impl Machine {
             Some(full_filment) => {
                 log::debug!("Fullfilment is: {}", full_filment);
                 if full_filment < 1. {
-                    return Some(true);
+                    Some(true)
                 } else {
                     self.status = MachineStatus::Ended;
-                    return Some(false);
+                    Some(false)
                 }
             }
-            None => return None,
+            None => None,
         }
     }
 
@@ -164,7 +163,7 @@ impl Machine {
          */
         if self.status == MachineStatus::NotStarted {
             if !self.verify_valid_start_postion() {
-                let msg = format!("No valid Context is not defined here. This was unexpected.");
+                let msg = "No valid Context is not defined here. This was unexpected.".to_string();
                 log::error!("{}", msg);
                 return Err(msg);
             }
@@ -175,7 +174,7 @@ impl Machine {
                 .get_mut(&self.start_pos.context_id.clone().unwrap());
 
             if context.is_none() {
-                let msg = format!("Context is not defined here. This was unexpected.");
+                let msg = "Context is not defined here. This was unexpected.".to_string();
                 log::error!("{}", msg);
                 return Err(msg);
             }
@@ -201,7 +200,7 @@ impl Machine {
             }
         } else if self.status == MachineStatus::Running {
             if !self.verify_valid_current_position() {
-                let msg = format!("No valid current position is defined. This was unexpected.");
+                let msg = "No valid current position is defined. This was unexpected.".to_string();
                 log::error!("{}", msg);
                 return Err(msg);
             }
@@ -265,7 +264,7 @@ impl Machine {
                                             vertex.shared_state.as_deref()
                                         );
                                         for (_key, other_vertex) in
-                                            spare_list_context.model.vertices.iter()
+                                            &spare_list_context.model.vertices
                                         {
                                             if other_vertex.shared_state.as_deref()
                                                 == vertex.shared_state.as_deref()
@@ -329,8 +328,7 @@ impl Machine {
                             }
                             None => {
                                 let msg = format!(
-                                    "Random selected index: {}, resulted in failure",
-                                    index
+                                    "Random selected index: {index}, resulted in failure"
                                 );
                                 log::error!("{}", msg);
                                 return Err(msg);
@@ -338,25 +336,25 @@ impl Machine {
                         }
                     }
                     self.status = MachineStatus::Ended;
-                    let msg = format!("Machine is exhausted");
+                    let msg = "Machine is exhausted".to_string();
                     log::error!("{}", msg);
                     return Err(msg);
                 }
                 None => {
                     self.status = MachineStatus::Ended;
-                    let msg = format!("Machine is exhausted");
+                    let msg = "Machine is exhausted".to_string();
                     log::error!("{}", msg);
                     return Err(msg);
                 }
             }
         } else if self.status == MachineStatus::Ended {
-            let msg = format!("Machine is exhausted");
+            let msg = "Machine is exhausted".to_string();
             log::error!("{}", msg);
             return Err(msg);
         }
-        let msg = format!("Machine is exhausted");
+        let msg = "Machine is exhausted".to_string();
         log::error!("{}", msg);
-        return Err(msg);
+        Err(msg)
     }
 
     fn verify_valid_start_postion(&mut self) -> bool {
@@ -374,9 +372,9 @@ impl Machine {
                 {
                     return true;
                 }
-                return false;
+                false
             }
-            None => return false,
+            None => false,
         }
     }
 
@@ -395,9 +393,9 @@ impl Machine {
                 {
                     return true;
                 }
-                return false;
+                false
             }
-            None => return false,
+            None => false,
         }
     }
 
@@ -452,15 +450,13 @@ impl Machine {
          * Verify the corectness of starting element and context.
          */
         match self.start_pos.context_id {
-            Some(_) => return Ok(()),
+            Some(_) => Ok(()),
             None => match self.start_pos.element_id {
-                Some(_) => return Ok(()),
+                Some(_) => Ok(()),
                 None => {
-                    let msg = format!(
-                        "Could not determine what model to start in. Is the startElementId correct?"
-                    );
+                    let msg = "Could not determine what model to start in. Is the startElementId correct?".to_string();
                     log::error!("{}", msg);
-                    return Err(msg);
+                    Err(msg)
                 }
             },
         }

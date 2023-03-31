@@ -19,17 +19,17 @@ pub fn read(input_file: &str) -> Result<Models, &str> {
 
         match suffix {
             Some("json") => {
-                return Ok(json::read::read(input_file));
+                Ok(json::read::read(input_file))
             }
             Some("dot") => {
-                return Ok(dot::read::read(input_file));
+                Ok(dot::read::read(input_file))
             }
             _ => {
                 debug!("Suffix for file is not yet implemented: {}", input_file);
-                return Err("File type is not implemented");
+                Err("File type is not implemented")
             }
         }
     } else {
-        return Err("Could not open file");
+        Err("Could not open file")
     }
 }
