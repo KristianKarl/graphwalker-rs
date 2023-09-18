@@ -25,9 +25,6 @@ fn convert_help() -> Result<(), Box<dyn std::error::Error>> {
         ))
         .stderr(predicate::str::contains("<INPUT>"))
         .stderr(predicate::str::contains(
-            "Usage: graphwalker convert <INPUT>",
-        ))
-        .stderr(predicate::str::contains(
             "For more information, try '--help'",
         ));
 

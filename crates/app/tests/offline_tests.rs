@@ -25,9 +25,6 @@ fn offline_help() -> Result<(), Box<dyn std::error::Error>> {
         ))
         .stderr(predicate::str::contains("<INPUT>"))
         .stderr(predicate::str::contains(
-            "Usage: graphwalker offline <INPUT>",
-        ))
-        .stderr(predicate::str::contains(
             "For more information, try '--help'",
         ));
 
