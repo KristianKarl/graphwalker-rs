@@ -8,12 +8,12 @@ edition = "2021"
 graph = { path = "../graph"}
 io = { path = "../io"}
 machine = { path = "../machine"}
-clap = "4.0.26"
+clap = "4.4.3"
 env_logger = "0.10.0"
-log = "0.4.17"
+log = "0.4.20"
 exitcode = "1.1.2"
-serde_json = "1.0.87"
+serde_json = "1.0.107"
 
 [dev-dependencies]
-assert_cmd = "2.0.8"
-predicates = "3.0.2"
+assert_cmd = "2.0.12"
+predicates = "3.0.4"
