@@ -537,11 +537,22 @@ mod tests {
     use io::json;
     use pretty_assertions::assert_eq;
 
+    fn resource_path(resource: &str) -> std::path::PathBuf {
+        let mut path = std::path::PathBuf::new();
+        path.push(env!("CARGO_MANIFEST_DIR"));
+        path.push("..");
+        path.push("..");
+        path.push("resources");
+        path.push("models");
+        path.push(resource);
+        path
+    }
+
     #[test]
     fn walk_multiple_model() {
         let mut machine = Machine::new();
         let res = machine.load_models(
-            json::read::read("../../models/simpleMultiModel.json")
+            json::read::read(resource_path("simpleMultiModel.json").to_str().unwrap())
                 .expect("Expexted the test file to be loaded"),
         );
         assert!(res.is_ok());
@@ -551,7 +562,7 @@ mod tests {
     fn walk_single_model() {
         let mut machine = Machine::new();
         let res = machine.load_models(
-            json::read::read("../../models/simpleSingleModel.json")
+            json::read::read(resource_path("simpleSingleModel.json").to_str().unwrap())
                 .expect("Expexted the test file to be loaded"),
         );
         assert!(res.is_ok());
@@ -564,7 +575,7 @@ mod tests {
         let mut machine = Machine::new();
         assert!(machine
             .load_models(
-                json::read::read("../../models/login.json")
+                json::read::read(resource_path("login.json").to_str().unwrap())
                     .expect("Expexted the test file to be loaded")
             )
             .is_ok());

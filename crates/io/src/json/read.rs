@@ -8,7 +8,8 @@ pub fn read(input_file: &str) -> Result<Models, String> {
     let res = fs::read_to_string(input_file);
     match res {
         Ok(json_str) => {
-            let models: Models = serde_json::from_str(&json_str).expect(&format!("Unable to parse file: {}", input_file));
+            let models: Models = serde_json::from_str(&json_str)
+                .expect(&format!("Unable to parse file: {}", input_file));
             Ok(models)
         }
         Err(why) => {
@@ -16,8 +17,6 @@ pub fn read(input_file: &str) -> Result<Models, String> {
             Err(why.to_string())
         }
     }
-    
-    
 }
 
 #[cfg(test)]
@@ -26,9 +25,21 @@ mod tests {
 
     use pretty_assertions::assert_eq;
 
+    fn resource_path(resource: &str) -> std::path::PathBuf {
+        let mut path = std::path::PathBuf::new();
+        path.push(env!("CARGO_MANIFEST_DIR"));
+        path.push("..");
+        path.push("..");
+        path.push("resources");
+        path.push("models");
+        path.push(resource);
+        path
+    }
+
     #[test]
     fn read_valid_jason_file() {
-        let json = fs::read_to_string("../../models/login.json").expect("Unable to read file");
+        let json = fs::read_to_string(resource_path(resource_path("login.json").to_str().unwrap()))
+            .expect("Unable to read file");
         let models: Models = serde_json::from_str(&json).expect("Unable to parse");
 
         assert_eq!(models.models.len(), 1);
