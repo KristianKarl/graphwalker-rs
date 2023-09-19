@@ -17,6 +17,7 @@ enum MachineStatus {
     Ended,
 }
 
+/// Some execution point of the machine
 #[derive(Debug, Clone)]
 pub struct Position {
     context_id: Option<String>,
@@ -139,7 +140,7 @@ impl Machine {
      */
     pub fn next_step(&mut self) -> Result<Option<Position>, String> {
         /*
-         * If machine is not started, we pick the `start_id` as the first element
+         * If machine is not started, pick the `start_id` as the first element
          * to be executed.
          * There can only be one starting point in a machine.
          */
@@ -262,7 +263,6 @@ impl Machine {
                     /*
                      * First check if the current vertex is a shared vertex.
                      */
-
                     if let Some(vertex) = context.model.vertices.get(
                         &self
                             .current_pos
