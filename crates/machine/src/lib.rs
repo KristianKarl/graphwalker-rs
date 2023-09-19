@@ -1,44 +1,14 @@
 use rand::Rng;
-use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use graph::{Model, Models};
+use graph::Models;
 
-#[derive(Debug, Clone)]
-struct StopCondition {}
+pub mod context;
+pub mod profile;
 
-#[derive(Debug, Clone)]
-struct Generator {
-    _stop_conditions: Vec<StopCondition>,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub struct Step {
-    context_id: String,
-    element_id: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub struct Profile {
-    steps: Vec<Step>,
-}
-
-impl Profile {
-    fn new() -> Self {
-        Self { steps: Vec::new() }
-    }
-
-    fn push(&mut self, step: Step) {
-        log::trace!("{:?}", step);
-        self.steps.push(step);
-    }
-}
-#[derive(Debug, Clone)]
-struct Context {
-    pub id: String,
-    model: Model,
-    _generators: Vec<Generator>,
-}
+use crate::context::Context;
+use crate::profile::Profile;
+use crate::profile::Step;
 
 #[derive(Debug, PartialEq)]
 enum MachineStatus {
@@ -451,7 +421,7 @@ impl Machine {
                 Context {
                     id: key.clone(),
                     model: model.clone(),
-                    _generators: Vec::new(),
+                    generators: Vec::new(),
                 },
             );
 
@@ -534,7 +504,6 @@ impl Machine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use io::json;
     use pretty_assertions::assert_eq;
 
     fn resource_path(resource: &str) -> std::path::PathBuf {
@@ -552,7 +521,7 @@ mod tests {
     fn walk_multiple_model() {
         let mut machine = Machine::new();
         let res = machine.load_models(
-            json::read::read(resource_path("simpleMultiModel.json").to_str().unwrap())
+            io::json_read::read(resource_path("simpleMultiModel.json").to_str().unwrap())
                 .expect("Expexted the test file to be loaded"),
         );
         assert!(res.is_ok());
@@ -562,7 +531,7 @@ mod tests {
     fn walk_single_model() {
         let mut machine = Machine::new();
         let res = machine.load_models(
-            json::read::read(resource_path("simpleSingleModel.json").to_str().unwrap())
+            io::json_read::read(resource_path("simpleSingleModel.json").to_str().unwrap())
                 .expect("Expexted the test file to be loaded"),
         );
         assert!(res.is_ok());
@@ -575,7 +544,7 @@ mod tests {
         let mut machine = Machine::new();
         assert!(machine
             .load_models(
-                json::read::read(resource_path("login.json").to_str().unwrap())
+                io::json_read::read(resource_path("login.json").to_str().unwrap())
                     .expect("Expexted the test file to be loaded")
             )
             .is_ok());

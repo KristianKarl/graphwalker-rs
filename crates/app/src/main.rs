@@ -75,7 +75,7 @@ fn main() {
             if let Some(format) = convert_matches.get_one::<String>("format") {
                 match format.as_str() {
                     "json" => {
-                        let res = io::json::write::write(models);
+                        let res = io::json_write::write(models);
                         match res {
                             Ok(_) => {}
                             Err(why) => {
@@ -85,7 +85,7 @@ fn main() {
                         }
                     }
                     "dot" => {
-                        io::dot::write::write(models);
+                        io::dot_write::write(models);
                     }
                     _ => {
                         error!("Output format for file is not yet implemented.");
