@@ -30,31 +30,31 @@ pub fn write(models: Models) {
                         &edge
                             .source_vertex_id
                             .clone()
-                            .expect("Expexted source vertex id")
+                            .expect("Source vertex id")
                     )
-                    .expect("Expexted a source vertex")
+                    .expect("Source vertex")
                     .id
                     .clone()
-                    .expect("Expexted source vertex name"),
+                    .expect("Source vertex name"),
                 &model
                     .vertices
                     .get(
                         &edge
                             .target_vertex_id
                             .clone()
-                            .expect("Expexted a target vertex id")
+                            .expect("Target vertex id")
                     )
-                    .expect("Expexted a target vertex")
+                    .expect("Target vertex")
                     .id
                     .clone()
-                    .expect("Expexted a target vertex name"),
-                edge.name.clone().expect("Expexted an edge name"),
-                edge.id.clone().expect("Expexted an edge id")
+                    .expect("Target vertex name"),
+                edge.name.clone().expect("Edge name"),
+                edge.id.clone().expect("Edge id")
             );
             if edge.guard.is_some() {
                 print!(
                     "\\nGuard: {}",
-                    edge.guard.clone().expect("Expexted a guard for an edge")
+                    edge.guard.clone().expect("Guard for an edge")
                 );
             }
             if !edge.actions.is_empty() {
