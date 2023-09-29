@@ -8,7 +8,7 @@ pub struct Step {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Profile {
-    steps: Vec<Step>,
+    pub steps: Vec<Step>,
 }
 
 impl Profile {

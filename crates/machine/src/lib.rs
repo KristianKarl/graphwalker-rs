@@ -524,7 +524,11 @@ mod tests {
             io::json_read::read(resource_path("simpleMultiModel.json").to_str().unwrap())
                 .expect("Expexted the test file to be loaded"),
         );
-        assert!(res.is_ok());
+        assert_eq!(res.is_ok(), true);
+
+        let res = machine.walk();
+        assert_eq!(res.is_ok(), true, "{:?}", Err::<(), Result<(), &str>>(res));
+        assert!(machine.get_profile().steps.len() > 10);
     }
 
     #[test]
@@ -534,9 +538,10 @@ mod tests {
             io::json_read::read(resource_path("simpleSingleModel.json").to_str().unwrap())
                 .expect("Expexted the test file to be loaded"),
         );
-        assert!(res.is_ok());
+        assert_eq!(res.is_ok(), true);
+
         let res = machine.walk();
-        assert!(res.is_ok(), "{:?}", Err::<(), Result<(), &str>>(res));
+        assert_eq!(res.is_ok(), true, "{:?}", Err::<(), Result<(), &str>>(res));
     }
 
     #[test]
@@ -577,10 +582,12 @@ mod tests {
                 match machine.has_next() {
                     Some(has_next) => {
                         if !has_next {
+                            assert_eq!(machine.status, MachineStatus::Ended);
                             break;
                         }
                     }
                     None => {
+                        assert_eq!(machine.status, MachineStatus::Ended);
                         break;
                     }
                 }
