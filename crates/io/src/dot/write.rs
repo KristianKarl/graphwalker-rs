@@ -8,11 +8,23 @@ pub fn write(models: Models) {
             model.name.clone().expect("Expected a model name")
         );
 
-        for j in model.edges {
+        for n in &model.vertices {
+            let v = n.1;
+            print!(
+                "  {} [label=\"{}\\nid: {}\"]\n",
+                v.id.clone().expect("An id for the vertex."),
+                v.name.clone().expect("A name for the vertex."),
+                v.id.clone().expect("An id for the vertex.")
+            );
+        }
+
+        print!("\n");
+
+        for j in &model.edges {
             let edge = j.1;
             print!(
-                "  {} -> {} [label=\"{}",
-                model
+                "  {} -> {} [label=\"{}\\nid: {}",
+                &model
                     .vertices
                     .get(
                         &edge
@@ -21,10 +33,10 @@ pub fn write(models: Models) {
                             .expect("Expexted source vertex id")
                     )
                     .expect("Expexted a source vertex")
-                    .name
+                    .id
                     .clone()
                     .expect("Expexted source vertex name"),
-                model
+                &model
                     .vertices
                     .get(
                         &edge
@@ -33,20 +45,21 @@ pub fn write(models: Models) {
                             .expect("Expexted a target vertex id")
                     )
                     .expect("Expexted a target vertex")
-                    .name
+                    .id
                     .clone()
                     .expect("Expexted a target vertex name"),
-                edge.name.clone().expect("Expexted an edge name")
+                edge.name.clone().expect("Expexted an edge name"),
+                edge.id.clone().expect("Expexted an edge id")
             );
             if edge.guard.is_some() {
                 print!(
-                    "\\n[{}]",
+                    "\\nGuard: {}",
                     edge.guard.clone().expect("Expexted a guard for an edge")
                 );
             }
             if !edge.actions.is_empty() {
                 for action in &edge.actions {
-                    print!("\\n{action}");
+                    print!("\\nAction: {action}");
                 }
             }
             println!("\"]");
