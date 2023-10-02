@@ -210,7 +210,7 @@ impl Machine {
             ) {
                 log::trace!("Current model and element are: {:?}", self.current_pos);
 
-                // Is the current element an edge, and does is exist in the mdoel?
+                // Is the current element an edge, and does is exist in the model?
                 match context.model.edges.get(
                     &self
                         .current_pos
