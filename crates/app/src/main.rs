@@ -37,26 +37,56 @@ fn main() {
                                             .help("seeds the generator with NUMBER to get predictable outputs")
                                         )
                                     )
+                          .subcommand(
+                                Command::new("online")
+                                        .about("Starts a REST service. The generated path is fetched through the REST API.")
+                                        .arg(arg!(<INPUT> "The file with model(s) to use"))
+                                        .arg(arg!(--seed <NUMBER>)
+                                            .help("seeds the generator with NUMBER to get predictable outputs")
+                                        )
+                                        .arg(arg!(--port <NUMBER>)
+                                            .help("the port number of the REST service")
+                                            .default_value("9090")
+                                        )
+                                    )
                           .get_matches();
 
     if let Some(debug) = matches.get_one::<String>("debug") {
         match debug.as_str() {
             "error" => {
-                Builder::new().filter_level(LevelFilter::Error).target(Target::Stdout).init();
+                Builder::new()
+                    .filter_level(LevelFilter::Error)
+                    .target(Target::Stdout)
+                    .init();
             }
             "warn" => {
-                Builder::new().filter_level(LevelFilter::Warn).target(Target::Stdout).init();
+                Builder::new()
+                    .filter_level(LevelFilter::Warn)
+                    .target(Target::Stdout)
+                    .init();
             }
             "info" => {
-                Builder::new().filter_level(LevelFilter::Info).target(Target::Stdout).init();
+                Builder::new()
+                    .filter_level(LevelFilter::Info)
+                    .target(Target::Stdout)
+                    .init();
             }
             "debug" => {
-                Builder::new().filter_level(LevelFilter::Debug).target(Target::Stdout).init();
+                Builder::new()
+                    .filter_level(LevelFilter::Debug)
+                    .target(Target::Stdout)
+                    .init();
             }
             "trace" => {
-                Builder::new().filter_level(LevelFilter::Trace).target(Target::Stdout).init();
+                Builder::new()
+                    .filter_level(LevelFilter::Trace)
+                    .target(Target::Stdout)
+                    .init();
             }
-            _ => Builder::new().filter_level(LevelFilter::Error).target(Target::Stdout).init(),
+            _ => Builder::new()
+                .filter_level(LevelFilter::Error)
+                .target(Target::Stdout)
+                .init(),
         }
     }
 
@@ -146,6 +176,39 @@ fn main() {
                     error!("{}", &error);
                     std::process::exit(exitcode::SOFTWARE);
                 }
+            }
+        }
+
+
+        Some(("online", offline_matches)) => {
+            let file_read_result = io::read(
+                offline_matches
+                    .get_one::<String>("INPUT")
+                    .expect("required"),
+            );
+            let models = match file_read_result {
+                Ok(models) => models,
+                Err(error) => {
+                    error!("{}", &error);
+                    std::process::exit(exitcode::SOFTWARE);
+                }
+            };
+
+            let mut machine = machine::Machine::new();
+            let res = machine.load_models(models);
+            if res.is_err() {
+                error!("{:?}", res.err());
+                std::process::exit(exitcode::SOFTWARE);
+            }
+
+            if let Some(number_str) = offline_matches.get_one::<String>("seed") {
+                match number_str.parse::<u64>() {
+                    Ok(number) => machine.seed(number),
+                    Err(error) => {
+                        error!("{}", &error);
+                        std::process::exit(exitcode::SOFTWARE);
+                    }
+                };
             }
         }
 
