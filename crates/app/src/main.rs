@@ -2,7 +2,7 @@
 extern crate log;
 
 use clap::{arg, Command};
-use env_logger::Builder;
+use env_logger::{Builder, Target};
 use log::LevelFilter;
 
 fn main() {
@@ -33,27 +33,30 @@ fn main() {
                                 Command::new("offline")
                                         .about("Creates a path through the models. The output is written to standard outpout.")
                                         .arg(arg!(<INPUT> "The file with model(s) to use"))
+                                        .arg(arg!(--seed <NUMBER>)
+                                            .help("seeds the generator with NUMBER to get predictable outputs")
+                                        )
                                     )
                           .get_matches();
 
     if let Some(debug) = matches.get_one::<String>("debug") {
         match debug.as_str() {
             "error" => {
-                Builder::new().filter_level(LevelFilter::Error).init();
+                Builder::new().filter_level(LevelFilter::Error).target(Target::Stdout).init();
             }
             "warn" => {
-                Builder::new().filter_level(LevelFilter::Warn).init();
+                Builder::new().filter_level(LevelFilter::Warn).target(Target::Stdout).init();
             }
             "info" => {
-                Builder::new().filter_level(LevelFilter::Info).init();
+                Builder::new().filter_level(LevelFilter::Info).target(Target::Stdout).init();
             }
             "debug" => {
-                Builder::new().filter_level(LevelFilter::Debug).init();
+                Builder::new().filter_level(LevelFilter::Debug).target(Target::Stdout).init();
             }
             "trace" => {
-                Builder::new().filter_level(LevelFilter::Trace).init();
+                Builder::new().filter_level(LevelFilter::Trace).target(Target::Stdout).init();
             }
-            _ => Builder::new().filter_level(LevelFilter::Error).init(),
+            _ => Builder::new().filter_level(LevelFilter::Error).target(Target::Stdout).init(),
         }
     }
 
@@ -114,6 +117,16 @@ fn main() {
             if res.is_err() {
                 error!("{:?}", res.err());
                 std::process::exit(exitcode::SOFTWARE);
+            }
+
+            if let Some(number_str) = offline_matches.get_one::<String>("seed") {
+                match number_str.parse::<u64>() {
+                    Ok(number) => machine.seed(number),
+                    Err(error) => {
+                        error!("{}", &error);
+                        std::process::exit(exitcode::SOFTWARE);
+                    }
+                };
             }
 
             match machine.walk() {
