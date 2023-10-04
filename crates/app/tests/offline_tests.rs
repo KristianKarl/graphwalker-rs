@@ -38,7 +38,7 @@ fn offline_file_doesnt_exist() -> Result<(), Box<dyn std::error::Error>> {
     cmd.arg("offline").arg("file_doesnt_exist");
     cmd.assert()
         .failure()
-        .stderr(predicate::str::contains("Could not open file"));
+        .stdout(predicate::str::contains("Could not open file"));
 
     Ok(())
 }

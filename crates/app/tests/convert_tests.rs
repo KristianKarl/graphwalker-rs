@@ -38,7 +38,7 @@ fn convert_file_doesnt_exist() -> Result<(), Box<dyn std::error::Error>> {
     cmd.arg("convert").arg("file_doesnt_exist");
     cmd.assert()
         .failure()
-        .stderr(predicate::str::contains("Could not open file"));
+        .stdout(predicate::str::contains("Could not open file"));
 
     Ok(())
 }
@@ -63,7 +63,7 @@ fn convert_dot_to_json() -> Result<(), Box<dyn std::error::Error>> {
     cmd.arg("convert").arg(resource_path("dot/login.dot"));
     cmd.arg("--format").arg("json");
     cmd.assert()
-        .stderr(predicate::str::contains("Feature not implemented"));
+        .stdout(predicate::str::contains("Feature not implemented"));
 
     Ok(())
 }
@@ -77,7 +77,7 @@ fn input_file_format_not_yet_implemented() -> Result<(), Box<dyn std::error::Err
     cmd.arg("--format").arg("json");
     cmd.assert()
         .failure()
-        .stderr(predicate::str::contains("File type is not implemented"));
+        .stdout(predicate::str::contains("File type is not implemented"));
 
     Ok(())
 }
@@ -88,7 +88,7 @@ fn ouput_file_format_not_yet_implemented() -> Result<(), Box<dyn std::error::Err
 
     cmd.arg("convert").arg(resource_path("login.json"));
     cmd.arg("--format").arg("graphml");
-    cmd.assert().failure().stderr(predicate::str::contains(
+    cmd.assert().failure().stdout(predicate::str::contains(
         "Output format for file is not yet implemented",
     ));
 
