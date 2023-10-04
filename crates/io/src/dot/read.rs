@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use graph::Models;
 use log::{debug, error};
@@ -9,6 +9,6 @@ pub fn read(input_file: &str) -> Models {
     error!("Feature not implemented");
 
     Models {
-        models: HashMap::new(),
+        models: BTreeMap::new(),
     }
 }

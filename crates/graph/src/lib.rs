@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use serde_derive::{Deserialize, Serialize};
 
@@ -6,23 +6,23 @@ use serde_derive::{Deserialize, Serialize};
 mod models_to_hash {
     use super::Model;
 
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     use serde::de::{Deserialize, Deserializer};
     use serde::ser::Serializer;
 
-    pub fn serialize<S>(map: &HashMap<String, Model>, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(map: &BTreeMap<String, Model>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         serializer.collect_seq(map.values())
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<String, Model>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<BTreeMap<String, Model>, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let mut map = HashMap::new();
+        let mut map = BTreeMap::new();
         for model in Vec::<Model>::deserialize(deserializer)? {
             map.insert(model.id.clone().expect("Expected a model id"), model);
         }
@@ -32,23 +32,23 @@ mod models_to_hash {
 mod vertices_to_hash {
     use super::Vertex;
 
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     use serde::de::{Deserialize, Deserializer};
     use serde::ser::Serializer;
 
-    pub fn serialize<S>(map: &HashMap<String, Vertex>, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(map: &BTreeMap<String, Vertex>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         serializer.collect_seq(map.values())
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<String, Vertex>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<BTreeMap<String, Vertex>, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let mut map = HashMap::new();
+        let mut map = BTreeMap::new();
         for vertex in Vec::<Vertex>::deserialize(deserializer)? {
             map.insert(vertex.id.clone().expect("Expected a vertex id"), vertex);
         }
@@ -59,23 +59,23 @@ mod vertices_to_hash {
 mod edges_to_hash {
     use super::Edge;
 
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     use serde::de::{Deserialize, Deserializer};
     use serde::ser::Serializer;
 
-    pub fn serialize<S>(map: &HashMap<String, Edge>, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(map: &BTreeMap<String, Edge>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         serializer.collect_seq(map.values())
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<String, Edge>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<BTreeMap<String, Edge>, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let mut map = HashMap::new();
+        let mut map = BTreeMap::new();
         for edge in Vec::<Edge>::deserialize(deserializer)? {
             map.insert(edge.id.clone().expect("Expeted an edge id"), edge);
         }
@@ -86,7 +86,7 @@ mod edges_to_hash {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Models {
     #[serde(with = "models_to_hash")]
-    pub models: HashMap<String, Model>,
+    pub models: BTreeMap<String, Model>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
@@ -96,10 +96,10 @@ pub struct Model {
     pub name: Option<String>,
 
     #[serde(with = "vertices_to_hash")]
-    pub vertices: HashMap<String, Vertex>,
+    pub vertices: BTreeMap<String, Vertex>,
 
     #[serde(with = "edges_to_hash")]
-    pub edges: HashMap<String, Edge>,
+    pub edges: BTreeMap<String, Edge>,
 
     pub generator: Option<String>,
     pub start_element_id: Option<String>,
@@ -111,8 +111,8 @@ impl Model {
         Self {
             id: None,
             name: None,
-            vertices: HashMap::new(),
-            edges: HashMap::new(),
+            vertices: BTreeMap::new(),
+            edges: BTreeMap::new(),
             generator: None,
             start_element_id: None,
         }

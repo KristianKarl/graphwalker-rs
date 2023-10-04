@@ -1,5 +1,7 @@
 use rand::Rng;
-use std::collections::HashMap;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
+use std::collections::BTreeMap;
 
 use graph::Models;
 
@@ -18,7 +20,7 @@ enum MachineStatus {
 }
 
 /// Some execution point of the machine
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Position {
     context_id: Option<String>,
     element_id: Option<String>,
@@ -40,17 +42,18 @@ impl Position {
     }
 }
 pub struct Machine {
-    contexts: HashMap<String, Context>,
+    contexts: BTreeMap<String, Context>,
     profile: Profile,
     current_pos: Position,
     start_pos: Position,
     status: MachineStatus,
-    unvisited_elements: HashMap<String, u32>,
+    unvisited_elements: BTreeMap<String, u32>,
+    rng: ChaCha8Rng,
 }
 
 fn step(
     step: Step,
-    unvisited_elements: &mut HashMap<String, u32>,
+    unvisited_elements: &mut BTreeMap<String, u32>,
     profile: &mut Profile,
 ) -> Result<(), String> {
     if let Some(value) = unvisited_elements.get(&(step.context_id.clone() + &step.element_id)) {
@@ -79,12 +82,13 @@ impl Machine {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            contexts: HashMap::new(),
+            contexts: BTreeMap::new(),
             profile: Profile::new(),
             current_pos: Position::new(),
             start_pos: Position::new(),
             status: MachineStatus::NotStarted,
-            unvisited_elements: HashMap::new(),
+            unvisited_elements: BTreeMap::new(),
+            rng: ChaCha8Rng::from_entropy(),
         }
     }
 
@@ -271,7 +275,7 @@ impl Machine {
                             .expect("Expected current element id"),
                     ) {
                         if vertex.shared_state.is_some() {
-                            for (_key, spare_list_context) in spare_list {
+                            for spare_list_context in spare_list.values() {
                                 log::trace!(
                                     "Checking in model: {:?} for {:?}",
                                     spare_list_context.model.name.as_deref(),
@@ -310,8 +314,7 @@ impl Machine {
 
                     log::trace!("Candidate list: {:?}", candidate_elements);
 
-                    let mut rng = rand::thread_rng();
-                    let index = rng.gen_range(0..candidate_elements.len());
+                    let index = self.rng.gen_range(0..candidate_elements.len());
                     if let Some((ctx_id, elem_id)) = candidate_elements.get(index) {
                         log::trace!(
                             "Selected candidate: {}{}, using index {}",
@@ -499,6 +502,10 @@ impl Machine {
         }
         Ok(())
     }
+
+    pub fn seed(&mut self, number: u64) {
+        self.rng = ChaCha8Rng::seed_from_u64(number);
+    }
 }
 
 #[cfg(test)]
@@ -543,10 +550,24 @@ mod tests {
         let res = machine.walk();
         assert_eq!(res.is_ok(), true, "{:?}", Err::<(), Result<(), &str>>(res));
     }
+    #[test]
+    fn test_seed() {
+        let mut machine = Machine::new();
+        machine.seed(8739438725484);
+        let index = machine.rng.gen_range(0..1000);
+        assert_eq!(index, 144);
+        let index = machine.rng.gen_range(0..1000);
+        assert_eq!(index, 124);
+        let index = machine.rng.gen_range(0..1000);
+        assert_eq!(index, 629);
+        let index = machine.rng.gen_range(0..1000);
+        assert_eq!(index, 577);
+    }
 
     #[test]
     fn machine() {
         let mut machine = Machine::new();
+        machine.seed(8739438725484);
         assert!(machine
             .load_models(
                 io::json_read::read(resource_path("login.json").to_str().unwrap())
@@ -576,7 +597,14 @@ mod tests {
         let mut path = Vec::new();
         loop {
             if let Ok(next_pos) = machine.next_step() {
-                path.push(next_pos);
+                match next_pos {
+                    Some(position) => {
+                        path.push(position.clone().element_id);
+                        println!("{:?}", position);
+                    }
+                    None => assert!(false),
+                }
+
                 assert_eq!(machine.status, MachineStatus::Running);
 
                 match machine.has_next() {
@@ -596,5 +624,49 @@ mod tests {
                 break;
             }
         }
+
+        let mut expected_path = Vec::new();
+        expected_path.push("e0".to_string());
+        expected_path.push("n1".to_string());
+        expected_path.push("n1".to_string());
+        expected_path.push("e1".to_string());
+        expected_path.push("n2".to_string());
+        expected_path.push("e6".to_string());
+        expected_path.push("n1".to_string());
+        expected_path.push("e1".to_string());
+        expected_path.push("n2".to_string());
+        expected_path.push("e6".to_string());
+        expected_path.push("n1".to_string());
+        expected_path.push("e0".to_string());
+        expected_path.push("n1".to_string());
+        expected_path.push("e1".to_string());
+        expected_path.push("n2".to_string());
+        expected_path.push("e2".to_string());
+        expected_path.push("n3".to_string());
+        expected_path.push("e4".to_string());
+        expected_path.push("n1".to_string());
+        expected_path.push("e7".to_string());
+        expected_path.push("n3".to_string());
+        expected_path.push("e3".to_string());
+        expected_path.push("n2".to_string());
+        expected_path.push("e6".to_string());
+        expected_path.push("n1".to_string());
+        expected_path.push("e0".to_string());
+        expected_path.push("n1".to_string());
+        expected_path.push("n1".to_string());
+        expected_path.push("n1".to_string());
+        expected_path.push("e7".to_string());
+        expected_path.push("n3".to_string());
+        expected_path.push("n3".to_string());
+        expected_path.push("n3".to_string());
+        expected_path.push("e3".to_string());
+        expected_path.push("n2".to_string());
+        expected_path.push("e8".to_string());
+        expected_path.push("n2".to_string());
+        expected_path.push("e5".to_string());
+
+        assert!(path
+            .iter()
+            .all(|item| expected_path.contains(&item.clone().unwrap())));
     }
 }
