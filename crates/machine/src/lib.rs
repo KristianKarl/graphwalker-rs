@@ -12,7 +12,7 @@ use crate::context::Context;
 use crate::profile::Profile;
 use crate::profile::Step;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 enum MachineStatus {
     NotStarted,
     Running,
@@ -41,6 +41,7 @@ impl Position {
         }
     }
 }
+#[derive(Debug, Clone)]
 pub struct Machine {
     contexts: BTreeMap<String, Context>,
     profile: Profile,

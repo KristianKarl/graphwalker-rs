@@ -8,6 +8,7 @@ edition = "2021"
 graph = { path = "../graph"}
 io = { path = "../io"}
 machine = { path = "../machine"}
+rest = { path = "../rest"}
 clap = "4.4.3"
 env_logger = "0.10.0"
 log = "0.4.20"

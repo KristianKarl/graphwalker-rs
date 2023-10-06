@@ -179,7 +179,6 @@ fn main() {
             }
         }
 
-
         Some(("online", offline_matches)) => {
             let file_read_result = io::read(
                 offline_matches
@@ -210,6 +209,8 @@ fn main() {
                     }
                 };
             }
+
+            rest::run_rest_service(machine);
         }
 
         _ => {
