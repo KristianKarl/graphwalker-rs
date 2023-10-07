@@ -92,10 +92,9 @@ mod tests {
         assert_eq!(res.body(), "true", "Should return true.");
 
         let expected_path = vec![
-            "e0", "n1", "n1", "e1", "n2", "e6", "n1", "e1", "n2", "e6", "n1", "e0", "n1", "e1",
-            "n2", "e2", "n3", "e4", "n1", "e7", "n3", "e3", "n2", "e6", "n1", "e0", "n1", "n1",
-            "n1", "e7", "n3", "n3", "n3", "e3", "n2", "e8", "n2", "e5",
-        ];
+            "e0", "n1", "e0", "n1", "e0", "n1", "e1", "n2", "e6", "n1", "e7", "n3", "e4",
+            "n1", "e1", "n2", "e5", "n2", "e6", "n1", "e0", "n1", "e0", "n1", "e7", "n3",
+            "e3", "n2", "e8", "n2", "e6", "n1", "e1", "n2", "e5", "n2", "e2", ];
 
         for element in expected_path {
             let res = warp::test::request()

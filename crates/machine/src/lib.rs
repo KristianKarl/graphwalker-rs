@@ -278,6 +278,9 @@ impl Machine {
                     ) {
                         if vertex.shared_state.is_some() {
                             for spare_list_context in spare_list.values() {
+                                if spare_list_context.id == context.id {
+                                    continue;
+                                }
                                 log::trace!(
                                     "Checking in model: {:?} for {:?}",
                                     spare_list_context.model.name.as_deref(),
@@ -627,9 +630,9 @@ mod tests {
         }
 
         let expected_path = vec![
-            "e0", "n1", "n1", "e1", "n2", "e6", "n1", "e1", "n2", "e6", "n1", "e0", "n1", "e1",
-            "n2", "e2", "n3", "e4", "n1", "e7", "n3", "e3", "n2", "e6", "n1", "e0", "n1", "n1",
-            "n1", "e7", "n3", "n3", "n3", "e3", "n2", "e8", "n2", "e5",
+            "e0", "n1", "e0", "n1", "e0", "n1", "e1", "n2", "e6", "n1", "e7", "n3", "e4",
+            "n1", "e1", "n2", "e5", "n2", "e6", "n1", "e0", "n1", "e0", "n1", "e7", "n3",
+            "e3", "n2", "e8", "n2", "e6", "n1", "e1", "n2", "e5", "n2", "e2",
         ]
         .iter()
         .map(|s| s.to_string())
