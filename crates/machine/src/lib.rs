@@ -1,8 +1,8 @@
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
-use std::collections::BTreeMap;
 use serde_derive::Serialize;
+use std::collections::BTreeMap;
 
 use graph::Models;
 
@@ -601,8 +601,7 @@ mod tests {
             if let Ok(next_pos) = machine.next_step() {
                 match next_pos {
                     Some(position) => {
-                        path.push(position.clone().element_id);
-                        println!("{:?}", position);
+                        path.push(position.element_id.unwrap());
                     }
                     None => assert!(false),
                 }
@@ -627,48 +626,20 @@ mod tests {
             }
         }
 
-        let mut expected_path = Vec::new();
-        expected_path.push("e0".to_string());
-        expected_path.push("n1".to_string());
-        expected_path.push("n1".to_string());
-        expected_path.push("e1".to_string());
-        expected_path.push("n2".to_string());
-        expected_path.push("e6".to_string());
-        expected_path.push("n1".to_string());
-        expected_path.push("e1".to_string());
-        expected_path.push("n2".to_string());
-        expected_path.push("e6".to_string());
-        expected_path.push("n1".to_string());
-        expected_path.push("e0".to_string());
-        expected_path.push("n1".to_string());
-        expected_path.push("e1".to_string());
-        expected_path.push("n2".to_string());
-        expected_path.push("e2".to_string());
-        expected_path.push("n3".to_string());
-        expected_path.push("e4".to_string());
-        expected_path.push("n1".to_string());
-        expected_path.push("e7".to_string());
-        expected_path.push("n3".to_string());
-        expected_path.push("e3".to_string());
-        expected_path.push("n2".to_string());
-        expected_path.push("e6".to_string());
-        expected_path.push("n1".to_string());
-        expected_path.push("e0".to_string());
-        expected_path.push("n1".to_string());
-        expected_path.push("n1".to_string());
-        expected_path.push("n1".to_string());
-        expected_path.push("e7".to_string());
-        expected_path.push("n3".to_string());
-        expected_path.push("n3".to_string());
-        expected_path.push("n3".to_string());
-        expected_path.push("e3".to_string());
-        expected_path.push("n2".to_string());
-        expected_path.push("e8".to_string());
-        expected_path.push("n2".to_string());
-        expected_path.push("e5".to_string());
+        let expected_path = vec![
+            "e0", "n1", "n1", "e1", "n2", "e6", "n1", "e1", "n2", "e6", "n1", "e0", "n1", "e1",
+            "n2", "e2", "n3", "e4", "n1", "e7", "n3", "e3", "n2", "e6", "n1", "e0", "n1", "n1",
+            "n1", "e7", "n3", "n3", "n3", "e3", "n2", "e8", "n2", "e5",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
 
-        assert!(path
-            .iter()
-            .all(|item| expected_path.contains(&item.clone().unwrap())));
+        assert!(do_vecs_match(&expected_path, &path));
+    }
+
+    fn do_vecs_match<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) -> bool {
+        let matching = a.iter().zip(b.iter()).filter(|&(a, b)| a == b).count();
+        matching == a.len() && matching == b.len()
     }
 }
