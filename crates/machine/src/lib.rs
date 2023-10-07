@@ -2,6 +2,7 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use std::collections::BTreeMap;
+use serde_derive::Serialize;
 
 use graph::Models;
 
@@ -20,7 +21,7 @@ enum MachineStatus {
 }
 
 /// Some execution point of the machine
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct Position {
     context_id: Option<String>,
     element_id: Option<String>,
