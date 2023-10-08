@@ -11,6 +11,8 @@ pub mod dot_write;
 pub mod json_read;
 #[path = "json/write.rs"]
 pub mod json_write;
+#[path = "parsers/generator.rs"]
+pub mod parsers_generator;
 
 fn get_extension_from_filename(file_name: &str) -> Option<&str> {
     Path::new(file_name).extension().and_then(OsStr::to_str)
