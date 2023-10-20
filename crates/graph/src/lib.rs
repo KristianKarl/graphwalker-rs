@@ -126,24 +126,19 @@ impl Model {
         false
     }
 
-    pub fn out_edges(&mut self, id: Option<String>) -> Option<Vec<String>> {
-        match id {
-            Some(i) => {
-                let mut out_edges: Vec<String> = Vec::new();
-                for (key, edge) in &self.edges {
-                    if edge
-                        .source_vertex_id
-                        .clone()
-                        .expect("Expected a source vertex id")
-                        == i
-                    {
-                        out_edges.push(key.clone().to_string());
-                    }
-                }
-                Some(out_edges)
+    pub fn out_edges(&mut self, id: String) -> Vec<Edge> {
+        let mut out_edges: Vec<Edge> = Vec::new();
+        for edge in self.edges.values() {
+            if edge
+                .source_vertex_id
+                .clone()
+                .expect("Expected a source vertex id")
+                == id
+            {
+                out_edges.push(edge.clone());
             }
-            None => None,
         }
+        out_edges
     }
 }
 

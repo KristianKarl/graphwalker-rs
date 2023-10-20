@@ -160,18 +160,7 @@ fn main() {
             }
 
             match machine.walk() {
-                Ok(_success) => {
-                    let res = serde_json::to_string_pretty(&machine.get_profile());
-                    match res {
-                        Ok(json_str) => {
-                            println!("{json_str}");
-                        }
-                        Err(why) => {
-                            error!("{:?}", why);
-                            std::process::exit(exitcode::SOFTWARE);
-                        }
-                    }
-                }
+                Ok(()) => std::process::exit(exitcode::OK),
                 Err(error) => {
                     error!("{}", &error);
                     std::process::exit(exitcode::SOFTWARE);
@@ -210,7 +199,13 @@ fn main() {
                 };
             }
 
-            rest::run_rest_service(machine);
+            match machine.reset() {
+                Ok(()) => rest::run_rest_service(machine),
+                Err(error) => {
+                    error!("{}", &error);
+                    std::process::exit(exitcode::SOFTWARE);
+                }
+            }
         }
 
         _ => {

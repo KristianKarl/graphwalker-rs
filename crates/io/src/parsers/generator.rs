@@ -1,4 +1,4 @@
-// Parsers for parsing out and instanciating 
+// Parsers for parsing out and instanciating
 // combinations ofgenerators and stop condintions
 // For parsing nom will be used. Some relevant articles:
 //  - https://blog.adamchalmers.com/nom-chars/
@@ -75,7 +75,10 @@ mod tests {
         );
         assert_eq!(
             generator("random(edge_coverage(100) OR (reached_vertex(v1) AND time(800)))"),
-            Ok(("random", "edge_coverage(100) OR (reached_vertex(v1) AND time(800))"))
+            Ok((
+                "random",
+                "edge_coverage(100) OR (reached_vertex(v1) AND time(800))"
+            ))
         );
     }
 

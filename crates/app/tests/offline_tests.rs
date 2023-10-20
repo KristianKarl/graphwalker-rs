@@ -1,6 +1,6 @@
-use assert_cmd::prelude::*; // Add methods on commands
-use predicates::prelude::*; // Used for writing assertions
-use std::process::Command; // Run programs
+use assert_cmd::prelude::*;
+use predicates::prelude::*;
+use std::process::Command;
 
 fn resource_path(resource: &str) -> std::path::PathBuf {
     let mut path = std::path::PathBuf::new();
@@ -45,10 +45,13 @@ fn offline_file_doesnt_exist() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn offline() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("graphwalker")?;
-
-    cmd.arg("offline").arg(resource_path("login.json"));
-    cmd.assert().success();
+    let list_of_files = vec!["login.json", "petclinic.json"];
+    for file in list_of_files {
+        println!("Testing file: {}", file);
+        let mut cmd = Command::cargo_bin("graphwalker")?;
+        cmd.arg("offline").arg(resource_path(file));
+        cmd.assert().success();
+    }
 
     Ok(())
 }

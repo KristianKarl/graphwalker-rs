@@ -10,15 +10,15 @@ pub fn write(models: Models) {
 
         for n in &model.vertices {
             let v = n.1;
-            print!(
-                "  {} [label=\"{}\\nid: {}\"]\n",
+            println!(
+                "  {} [label=\"{}\\nid: {}\"]",
                 v.id.clone().expect("An id for the vertex."),
                 v.name.clone().expect("A name for the vertex."),
                 v.id.clone().expect("An id for the vertex.")
             );
         }
 
-        print!("\n");
+        println!();
 
         for j in &model.edges {
             let edge = j.1;
@@ -26,24 +26,14 @@ pub fn write(models: Models) {
                 "  {} -> {} [label=\"{}\\nid: {}",
                 &model
                     .vertices
-                    .get(
-                        &edge
-                            .source_vertex_id
-                            .clone()
-                            .expect("Source vertex id")
-                    )
+                    .get(&edge.source_vertex_id.clone().expect("Source vertex id"))
                     .expect("Source vertex")
                     .id
                     .clone()
                     .expect("Source vertex name"),
                 &model
                     .vertices
-                    .get(
-                        &edge
-                            .target_vertex_id
-                            .clone()
-                            .expect("Target vertex id")
-                    )
+                    .get(&edge.target_vertex_id.clone().expect("Target vertex id"))
                     .expect("Target vertex")
                     .id
                     .clone()

@@ -1,28 +1,34 @@
+use machine::MachineStatus;
 use std::convert::Infallible;
 use warp::{self, http::StatusCode};
 
 use crate::MachineRt;
 
 pub async fn has_next(machine: MachineRt) -> Result<Box<dyn warp::Reply>, Infallible> {
-    let mut m = machine.lock().await;
-    match m.has_next() {
-        Some(has_next) => {
-            return Ok(Box::new(warp::reply::json(&has_next)));
-        }
-        None => {}
+    let m = machine.lock().await;
+
+    if !m.is_all_fullfilled() && m.status == MachineStatus::Running {
+        log::debug!("hasNext: {:?}", true);
+        return Ok(Box::new(warp::reply::json(&true)));
     }
-    Ok(Box::new(StatusCode::BAD_REQUEST))
+
+    log::debug!("hasNext: {:?}", false);
+    Ok(Box::new(warp::reply::json(&false)))
 }
 
 pub async fn get_next(machine: MachineRt) -> Result<Box<dyn warp::Reply>, Infallible> {
     let mut m = machine.lock().await;
-    if let Ok(next_pos) = m.next_step() {
-        match next_pos {
-            Some(position) => {
-                return Ok(Box::new(warp::reply::json(&position)));
-            }
-            None => {}
+
+    let result = m.step();
+    match result {
+        Ok(step) => {
+            log::debug!("getNext: {:?}", step);
+            Ok(Box::new(warp::reply::json(&step)))
+        }
+
+        Err(err) => {
+            log::error!("getNext: {:?}", err);
+            Ok(Box::new(StatusCode::BAD_REQUEST))
         }
     }
-    Ok(Box::new(StatusCode::BAD_REQUEST))
 }

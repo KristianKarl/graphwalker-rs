@@ -7,8 +7,7 @@ use crate::MachineRt;
 pub fn graphwalker_routes(
     machine: MachineRt,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-        has_next(machine.clone())
-        .or(get_next(machine))
+    has_next(machine.clone()).or(get_next(machine))
 }
 
 fn has_next(
@@ -29,6 +28,8 @@ fn get_next(
         .and_then(handlers::get_next)
 }
 
-fn with_machine(machine: MachineRt) -> impl Filter<Extract = (MachineRt,), Error = Infallible> + Clone {
+fn with_machine(
+    machine: MachineRt,
+) -> impl Filter<Extract = (MachineRt,), Error = Infallible> + Clone {
     warp::any().map(move || machine.clone())
 }
