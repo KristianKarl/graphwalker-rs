@@ -103,6 +103,8 @@ pub struct Model {
 
     pub generator: Option<String>,
     pub start_element_id: Option<String>,
+    #[serde(default)]
+    pub actions: Vec<String>,
 }
 
 impl Model {
@@ -115,6 +117,7 @@ impl Model {
             edges: BTreeMap::new(),
             generator: None,
             start_element_id: None,
+            actions: vec![],
         }
     }
 

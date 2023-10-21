@@ -2,9 +2,12 @@
     "models": [
         {
             "name": "Login",
-            "id": "853429e2-0528-48b9-97b3-7725eafbb8b5",
+            "id": "login",
             "generator": "random(edge_coverage(100))",
-            "actions": [],
+            "actions": [
+                "validLogin=false",
+                "rememberMe=false"
+            ],
             "vertices": [
                 {
                     "id": "n1",
@@ -43,19 +46,6 @@
                 }
             ],
             "edges": [
-                {
-                    "id": "e0",
-                    "name": "e_Init",
-                    "actions": [
-                        "validLogin=false;rememberMe=false;"
-                    ],
-                    "requirements": [],
-                    "properties": {
-                        "description": "Remove all cache and user settings from file system."
-                    },
-                    "sourceVertexId": "n1",
-                    "targetVertexId": "n1"
-                },
                 {
                     "id": "e1",
                     "name": "e_StartClient",
@@ -143,7 +133,7 @@
                     "targetVertexId": "n2"
                 }
             ],
-            "startElementId": "e0"
+            "startElementId": "n1"
         }
     ]
 }

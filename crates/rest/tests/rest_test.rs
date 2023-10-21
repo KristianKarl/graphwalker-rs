@@ -1,7 +1,6 @@
 use assert_json_diff::assert_json_eq;
 use machine::{Machine, Position};
 use rest::{init_machine, routes};
-use snailquote::unescape;
 
 fn resource_path(resource: &str) -> std::path::PathBuf {
     let mut path = std::path::PathBuf::new();
@@ -55,7 +54,8 @@ async fn login_model() {
             res.err().expect("An error message")
         )
     }
-    machine.reset();
+    
+    assert_eq!( machine.reset().is_ok(), true);
 
     let m = init_machine(machine);
     let graphwalker_routes = routes::graphwalker_routes(m);
@@ -100,10 +100,7 @@ async fn login_model() {
             element_id: element.to_string(),
         };
         let body = std::str::from_utf8(res.body()).expect("Found invalid UTF-8");
-        assert_json_eq!(
-            unescape(body).unwrap(),
-            serde_json::to_string(&expected).unwrap()
-        );
+        assert_json_eq!(body, serde_json::to_string(&expected).unwrap());
     }
     let res = warp::test::request()
         .method("GET")

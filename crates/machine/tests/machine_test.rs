@@ -136,7 +136,7 @@ fn test_seed() {
 #[test]
 fn machine() {
     let mut machine = Machine::new();
-    machine.seed(8739438725484);
+    machine.seed(1234);
     assert!(machine
         .load_models(
             io::json_read::read(resource_path("login.json").to_str().unwrap())
@@ -157,21 +157,11 @@ fn machine() {
     );
 
     let start_pos = machine.clone().start_pos;
-    assert_eq!(
-        start_pos.model_id,
-        "853429e2-0528-48b9-97b3-7725eafbb8b5".to_string()
-    );
-    assert_eq!(start_pos.element_id, "e0".to_string());
+    assert_eq!(start_pos.model_id, "login".to_string());
 
     let expected = vec![
-        "e0", "n1", "e7", "n3", "e3", "n2", "e6", "n1", "e0", "n1", "e7", "n3", "e4", "n1", "e0",
-        "n1", "e7", "n3", "e4", "n1", "e7", "n3", "e3", "n2", "e6", "n1", "e7", "n3", "e4", "n1",
-        "e0", "n1", "e1", "n2", "e6", "n1", "e7", "n3", "e3", "n2", "e2", "n3", "e3", "n2", "e2",
-        "n3", "e4", "n1", "e1", "n2", "e6", "n1", "e0", "n1", "e0", "n1", "e7", "n3", "e4", "n1",
-        "e0", "n1", "e1", "n2", "e6", "n1", "e7", "n3", "e4", "n1", "e1", "n2", "e2", "n3", "e4",
-        "n1", "e0", "n1", "e1", "n2", "e6", "n1", "e1", "n2", "e2", "n3", "e3", "n2", "e8", "n2",
-        "e8", "n2", "e2", "n3", "e4", "n1", "e0", "n1", "e7", "n3", "e3", "n2", "e2", "n3", "e3",
-        "n2", "e8", "n2", "e5",
+        "n1", "e1", "n2", "e8", "n2", "e6", "n1", "e1", "n2", "e5", "n2", "e8", "n2", "e6", "n1",
+        "e1", "n2", "e2", "n3", "e4", "n1", "e7", "n3", "e3",
     ];
 
     let actual: Vec<&String> = machine

@@ -214,7 +214,7 @@
                     "id": "971ec838-468d-11e7-a919-92ebcb67fe33",
                     "name": "e_AddPetSuccessfully",
                     "actions": [
-                        " numOfPets++;"
+                        "numOfPets=numOfPets+1"
                     ],
                     "requirements": [],
                     "properties": [],

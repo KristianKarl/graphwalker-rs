@@ -1,8 +1,12 @@
+use evalexpr::*;
+use graph::Edge;
 use graph::Model;
-use serde_derive::{Deserialize, Serialize};
-use std::{cmp::Ordering, collections::BTreeMap};
-
 use graph::Models;
+use serde_derive::{Deserialize, Serialize};
+use std::{
+    cmp::Ordering,
+    collections::{BTreeMap, VecDeque},
+};
 
 #[path = "stop_conditions/stop_condition.rs"]
 pub mod stop_condition;
@@ -34,16 +38,18 @@ impl Position {
 
 #[derive(Clone, Default, Debug)]
 pub struct Profile {
-    pub steps: Vec<Position>,
+    pub steps: VecDeque<Position>,
 }
 
 impl Profile {
     fn new() -> Self {
-        Self { steps: Vec::new() }
+        Self {
+            steps: VecDeque::new(),
+        }
     }
 
     fn push(&mut self, step: Position) {
-        self.steps.push(step);
+        self.steps.push_back(step);
     }
 }
 
@@ -52,6 +58,8 @@ pub struct Context {
     id: String,
     model: Model,
     fullfillment: f32,
+    visited_elements: BTreeMap<String, u32>,
+    eval_context: evalexpr::HashMapContext,
 }
 
 impl Context {
@@ -60,6 +68,8 @@ impl Context {
             id: "".to_string(),
             model: Model::new(),
             fullfillment: 0f32,
+            visited_elements: BTreeMap::new(),
+            eval_context: evalexpr::HashMapContext::default(),
         }
     }
 }
@@ -77,10 +87,11 @@ pub enum MachineStatus {
 pub struct Machine {
     pub contexts: BTreeMap<String, Context>,
     pub profile: Profile,
-    unvisited_elements: BTreeMap<Position, u32>,
     current_pos: Position,
     pub start_pos: Position,
     pub status: MachineStatus,
+    walk_this_way: VecDeque<Position>,
+    unvisited_edges: Vec<Position>,
 }
 
 impl Machine {
@@ -89,77 +100,111 @@ impl Machine {
         Self {
             contexts: BTreeMap::new(),
             profile: Profile::new(),
-            unvisited_elements: BTreeMap::new(),
             current_pos: Position::default(),
             start_pos: Position::default(),
             status: MachineStatus::NotStarted,
+            walk_this_way: VecDeque::default(),
+            unvisited_edges: Vec::default(),
         }
     }
 
     /*
      * Calculates if the specific model has covered the models given their stop conditions
      */
-    fn get_fullfilment(&self, ctx_id: String) -> f32 {
-        let elements: Vec<_> = self
-            .unvisited_elements
-            .iter()
-            .filter(|(k, _v)| k.model_id == ctx_id)
-            .map(|(_k, v)| v)
-            .collect();
-        let element_count = elements.len();
+    fn get_fullfilment(&self, ctx: &Context) -> f32 {
+        let element_count = ctx.visited_elements.len();
 
         if element_count == 0 {
             return 1f32;
         }
 
-        let visited_count = elements.iter().filter(|v| v > &&&0).count();
+        let visited_count = ctx
+            .visited_elements
+            .iter()
+            .filter(|(_k, v)| v > &&0)
+            .count();
         log::debug!(
-            "Fullmillment for model: {:?} is {:?}",
-            ctx_id,
+            "Fullfillment for model: {:?} is {:?}",
+            ctx.id,
             visited_count as f32 / element_count as f32,
         );
         visited_count as f32 / element_count as f32
     }
 
-    fn is_fullfilled(&self, ctx_id: String) -> bool {
-        let fullfillment = self.contexts.get(&ctx_id).unwrap().fullfillment;
-        if self.get_fullfilment(ctx_id) < fullfillment {
+    fn is_fullfilled(&self, ctx: &Context) -> bool {
+        if self.get_fullfilment(ctx) < ctx.fullfillment {
             return false;
         }
         true
     }
 
     pub fn is_all_fullfilled(&self) -> bool {
-        for key in self.contexts.keys() {
-            if !self.is_fullfilled(key.to_string()) {
-                log::debug!("The model: {:?} is not fullfilled", key);
+        for ctx in self.contexts.values() {
+            if !self.is_fullfilled(ctx) {
+                log::debug!("The model: {:?} is not fullfilled", ctx.id);
                 return false;
             }
-            log::debug!("The model: {:?} is fullfilled", key);
+            log::debug!("The model: {:?} is fullfilled", ctx.id);
         }
         log::debug!("All models are fullfilled");
         true
     }
 
-    fn log_step(&mut self, step: Position) -> Result<String, String> {
+    fn log_step(&mut self, step: &Position) -> Result<(), String> {
         log::debug!("Step: {:?}", step);
-        if let Some(value) = self.unvisited_elements.get(&step.clone()) {
-            let visited = value + 1;
-            self.unvisited_elements.insert(step.clone(), visited);
+
+        if let Some(ctx) = self.contexts.get_mut(&step.model_id) {
+            log::debug!("Data: {:?}", ctx.eval_context);
+
+            if let Some(value) = ctx.visited_elements.get(&step.element_id) {
+                let visited = value + 1;
+                ctx.visited_elements
+                    .insert(step.clone().element_id, visited);
+            } else {
+                let msg = format!(
+                    "Expected the key {:?} to be found in unvisited_elements",
+                    step.clone()
+                );
+                log::error!("{}", msg);
+                return Err(msg);
+            }
+            self.profile.push(step.clone());
+            Ok(())
         } else {
             let msg = format!(
-                "Expected the key {:?} to be found in unvisited_elements",
-                step.clone()
+                "The model id {:?} was not found in the machine",
+                step.model_id
             );
             log::error!("{}", msg);
-            return Err(msg);
+            Err(msg)
         }
-        self.profile.push(step.clone());
-        Ok(serde_json::to_string(&step).unwrap())
     }
 
     pub fn reset(&mut self) -> Result<(), String> {
         log::debug!("Resetting the machine");
+        log::info!("The seed is: {:?}", fastrand::get_seed());
+
+        for ctx in self.contexts.values_mut() {
+            ctx.eval_context = HashMapContext::default();
+
+            for action in &ctx.model.actions {
+                log::debug!("Will run model sction: {:?}", action);
+
+                match eval_with_context_mut(action, &mut ctx.eval_context) {
+                    Ok(value) => {
+                        log::debug!("Action evaluated to: {:?}", value);
+                    }
+                    Err(err) => {
+                        let msg = format!(
+                            "Evaluating action {:?}, failed with error: {:?}",
+                            action, err
+                        );
+                        log::error!("{}", msg);
+                        return Err(msg);
+                    }
+                }
+            }
+        }
 
         // First check that all start element ids are the same.
         self.start_pos = Position::default();
@@ -186,7 +231,7 @@ impl Machine {
             return Err(msg);
         }
 
-        // Find the model in which the model id exists
+        // Find the model in which the start element id exists
         for (key, ctx) in &self.contexts {
             if ctx.model.has_id(self.start_pos.element_id.clone()) {
                 self.start_pos.model_id = key.to_string();
@@ -203,20 +248,21 @@ impl Machine {
             return Err(msg);
         }
 
-        // Reset visited elements
-        let mut elements = BTreeMap::new();
-
-        for (key, ctx) in &self.contexts {
+        // Reset visited elements and unvisited edges
+        self.unvisited_edges = Vec::default();
+        for (key, ctx) in &mut self.contexts {
+            let mut visited_elements = BTreeMap::new();
+            let mut unvisited_edges = Vec::new();
             for k in ctx.model.edges.keys() {
-                let position = Position::new(key.clone(), k.to_string());
-                elements.insert(position, 0);
+                visited_elements.insert(k.to_string(), 0);
+                unvisited_edges.push(Position::new(key.to_string(), k.to_string()));
             }
             for k in ctx.model.vertices.keys() {
-                let position = Position::new(key.clone(), k.to_string());
-                elements.insert(position, 0);
+                visited_elements.insert(k.to_string(), 0);
             }
+            ctx.visited_elements = visited_elements;
+            self.unvisited_edges.extend(unvisited_edges);
         }
-        self.unvisited_elements = elements;
 
         /*
          * Check that there's a start position
@@ -267,19 +313,105 @@ impl Machine {
         Ok(())
     }
 
-    pub fn step(&mut self) -> Result<String, String> {
+    /*/
+     * From current position, which mush represent a vertex, select the next step (edge)
+     */
+    fn select_next_edge(
+        &mut self,
+        current_pos: &Position,
+        model: &mut Model,
+    ) -> Result<Position, String> {
+        if let Some(vertex) = model.vertices.get(&current_pos.element_id) {
+            // Build a list of candidates of edges to select
+            // Look for shared_states
+            let mut candidates: Vec<Position> = Vec::new();
+            if let Some(name) = vertex.clone().shared_state {
+                candidates.clone_from(&self.get_other_shared_states(name));
+                // Remove the current vertex from the candidate list, since we are already at it.
+                let index = candidates
+                    .iter()
+                    .position(|x| *x == current_pos.clone())
+                    .unwrap();
+                candidates.remove(index);
+            }
+
+            for e in model.out_edges(current_pos.element_id.clone()) {
+                let pos = Position {
+                    model_id: current_pos.model_id.clone(),
+                    element_id: e.id.clone().unwrap(),
+                };
+                if self.is_selectable(model.id.clone().unwrap(), &e) {
+                    log::trace!("Adding {:?} to the candidates list", pos);
+                    candidates.push(pos);
+                }
+            }
+
+            if candidates.is_empty() {
+                // Vertex is a cul-de-sac
+                let msg = format!("Vertex {} is a cul-de-sac", current_pos.element_id);
+                log::warn!("{}", msg);
+                return Err(msg);
+            }
+
+            let random_index = fastrand::usize(..candidates.len());
+            self.current_pos = candidates[random_index].clone();
+
+            return Ok(current_pos.clone());
+        }
+
+        // If reached this code, there is something fishy going on
+        let msg = format!(
+            "Could not find vertex nor edge matching the current position: {:?}",
+            current_pos
+        );
+        log::warn!("{}", msg);
+        Err(msg)
+    }
+
+    // fn popuplate_walk_this_way(&mut self) {
+    //     if !self.walk_this_way.is_empty() {
+    //         return;
+    //     }
+    //     let random_index = fastrand::usize(..self.unvisited_edges.len());
+    //     let pos = self.unvisited_edges[random_index].clone();
+    // }
+
+    pub fn step(&mut self) -> Result<Position, String> {
         let current_pos = self.current_pos.clone();
-        let msg = match self.log_step(current_pos.clone()) {
-            Ok(step_str) => step_str,
+
+        match self.log_step(&current_pos) {
+            Ok(()) => {}
             Err(err) => return Err(err),
         };
 
-        let mut model = self
-            .contexts
-            .get_mut(&current_pos.clone().model_id)
-            .unwrap()
-            .model
-            .clone();
+        match self.run_action(&current_pos) {
+            Ok(_) => {}
+            Err(err) => return Err(err),
+        };
+
+        // self.popuplate_walk_this_way();
+        // if !self.walk_this_way.is_empty() {
+        //     if let Some(pos) = self.walk_this_way.pop_front() {
+        //         self.current_pos = pos;
+        //         return Ok(current_pos);
+        //     }
+        //     let msg = "Unexpected problem. walk_this_way was not empty, but was not able to get a Position".to_string();
+        //     log::warn!("{}", msg);
+        //     return Err(msg);
+        // } else {
+        //     let msg = "Machine is exhausted".to_string();
+        //     log::warn!("{}", msg);
+        //     return Err(msg);
+        // }
+
+        let mut model;
+        if let Some(ctx) = self.contexts.get(&current_pos.model_id) {
+            model = ctx.model.clone();
+        } else {
+            let msg = format!("Could not find model id: {}", &current_pos.model_id);
+            log::warn!("{}", msg);
+            return Err(msg);
+        }
 
         // Check that the element does exist in the model
         if !model.has_id(current_pos.clone().element_id) {
@@ -296,45 +428,94 @@ impl Machine {
         // The next element is the destination vertex.
         if let Some(edge) = model.edges.clone().get(&current_pos.clone().element_id) {
             self.current_pos.element_id = edge.target_vertex_id.as_ref().unwrap().to_string();
-            return Ok(msg);
+            return Ok(current_pos);
         }
 
-        // The current position must represent a vertex
-        if let Some(vertex) = model.vertices.get(&current_pos.clone().element_id) {
-            // Look for shared_states
-            let mut candidates: Vec<Position> = Vec::new();
-            if let Some(name) = vertex.clone().shared_state {
-                candidates.clone_from(&self.get_other_shared_states(name));
-                // Remove the current vertex from the candidate list, since we are already at it.
-                let index = candidates.iter().position(|x| *x == current_pos).unwrap();
-                candidates.remove(index);
+        // If we have not found a step yet, the next step must be a an edge.
+        self.select_next_edge(&current_pos, &mut model)
+    }
+
+    /*
+     * Return the id of the context and a list of actions matching the position
+     * of the element.
+     */
+    fn get_actions(&self, pos: &Position) -> (String, Vec<String>) {
+        for (k, v) in &self.contexts {
+            if let Some(edge) = v.model.edges.get(&pos.element_id) {
+                return (k.clone(), edge.actions.clone());
             }
-
-            for e in model.out_edges(current_pos.clone().element_id) {
-                let pos = Position {
-                    model_id: current_pos.clone().model_id,
-                    element_id: e.id.unwrap(),
-                };
-                candidates.push(pos);
+            if let Some(vertex) = v.model.vertices.get(&pos.element_id) {
+                return (k.clone(), vertex.actions.clone());
             }
+        }
+        ("".to_string(), Vec::default())
+    }
 
-            if candidates.is_empty() {
-                // Vertex is a cul-de-sac
-                let msg = format!("Vertex {} is a cul-de-sac", current_pos.clone().element_id);
-                log::warn!("{}", msg);
-                return Err(msg);
-            }
+    fn run_action(&mut self, pos: &Position) -> Result<Value, String> {
+        let (ctx_id, actions) = self.get_actions(pos);
 
-            let random_index = fastrand::usize(..candidates.len());
-            self.current_pos = candidates[random_index].clone();
-
-            return Ok(msg);
+        if ctx_id.is_empty() || actions.is_empty() {
+            return Ok(Value::Empty);
         }
 
-        // If reached this code, there is something fishy going on
-        let msg = "Could not find vertex nor edge matching the current position".to_string();
-        log::warn!("{}", msg);
-        Err(msg)
+        if let Some(ctx) = self.contexts.get_mut(&ctx_id) {
+            if let Some(action) = actions.into_iter().next() {
+                log::debug!("Will run: {:?}", action);
+
+                match eval_with_context_mut(&action, &mut ctx.eval_context) {
+                    Ok(value) => {
+                        log::debug!("Action evaluated to: {:?}", value);
+                        return Ok(value);
+                    }
+                    Err(err) => {
+                        let msg = format!(
+                            "Evaluating action {:?}, failed with error: {:?}",
+                            action, err
+                        );
+                        log::error!("{}", msg);
+                        return Err(msg);
+                    }
+                }
+            }
+        }
+        Ok(Value::Empty)
+    }
+
+    /*
+     * Returns true if no guard exists for an edge, or if the guard evaluates to true.
+     * Else returns false
+     */
+    fn is_selectable(&mut self, ctx_id: String, e: &Edge) -> bool {
+        if let Some(guard) = e.guard.clone() {
+            log::debug!("Edge has guard: {:?}", guard);
+
+            if let Some(ctx) = self.contexts.get_mut(&ctx_id) {
+                match eval_with_context_mut(&guard, &mut ctx.eval_context) {
+                    Ok(value) => match value.as_boolean() {
+                        Ok(res) => {
+                            log::debug!("The guard evaluated to: {:?}", res);
+                            return res;
+                        }
+                        Err(err) => {
+                            let msg = format!(
+                                "Evaluating guard {:?}, failed with error: {:?}",
+                                guard, err
+                            );
+                            log::error!("{}", msg);
+                            return true;
+                        }
+                    },
+                    Err(err) => {
+                        let msg =
+                            format!("Evaluating guard {:?}, failed with error: {:?}", guard, err);
+                        log::error!("{}", msg);
+                        return true;
+                    }
+                }
+            }
+        }
+        log::trace!("No guard");
+        true
     }
 
     pub fn walk(&mut self) -> Result<(), String> {
@@ -355,13 +536,20 @@ impl Machine {
             }
 
             match self.step() {
-                Ok(step) => {
-                    println!("{:?}", step);
-                    if self.status == MachineStatus::Ended {
-                        log::debug!("The machine has ended");
-                        return Ok(());
+                Ok(step) => match serde_json::to_string(&step) {
+                    Ok(step_json_str) => {
+                        println!("{}", step_json_str);
+                        if self.status == MachineStatus::Ended {
+                            log::debug!("The machine has ended");
+                            return Ok(());
+                        }
                     }
-                }
+                    Err(err) => {
+                        let msg = format!("Could extract the json str from step: {:?}", err);
+                        log::warn!("{}", msg);
+                        return Err(msg);
+                    }
+                },
                 Err(err) => {
                     self.status = MachineStatus::Failed;
                     log::debug!("The machine has failed");

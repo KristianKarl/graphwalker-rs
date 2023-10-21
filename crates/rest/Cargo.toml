@@ -17,4 +17,3 @@ log = "0.4.20"
 [dev-dependencies]
 io = { path = "../io" }
 assert-json-diff = "2.0.2"
-snailquote = "0.3.1"
