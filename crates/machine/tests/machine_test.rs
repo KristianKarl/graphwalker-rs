@@ -113,7 +113,7 @@ fn walk_single_model() {
         .profile
         .steps
         .iter()
-        .map(|p| &p.element_id)
+        .map(|p| &p.position.element_id)
         .collect();
 
     assert_json_eq!(expected, actual);
@@ -168,7 +168,7 @@ fn machine() {
         .profile
         .steps
         .iter()
-        .map(|p| &p.element_id)
+        .map(|p| &p.position.element_id)
         .collect();
 
     assert_json_eq!(expected, actual);

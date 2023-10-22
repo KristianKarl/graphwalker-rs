@@ -54,8 +54,8 @@ async fn login_model() {
             res.err().expect("An error message")
         )
     }
-    
-    assert_eq!( machine.reset().is_ok(), true);
+
+    assert_eq!(machine.reset().is_ok(), true);
 
     let m = init_machine(machine);
     let graphwalker_routes = routes::graphwalker_routes(m);

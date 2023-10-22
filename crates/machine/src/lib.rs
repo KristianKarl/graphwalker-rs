@@ -2,6 +2,7 @@ use evalexpr::*;
 use graph::Edge;
 use graph::Model;
 use graph::Models;
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 use serde_derive::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
@@ -36,9 +37,48 @@ impl Position {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct Data {
+    name: String,
+    value: evalexpr::Value,
+}
+
+impl Serialize for Data {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut s = serializer.serialize_struct("Data", 2)?;
+        s.serialize_field("name", &self.name)?;
+
+        if self.value.is_boolean() {
+            s.serialize_field("value", &self.value.as_boolean().unwrap())?;
+        } else if self.value.is_empty() {
+            s.serialize_field("value", &self.value.as_empty().unwrap())?;
+        } else if self.value.is_float() {
+            s.serialize_field("value", &self.value.as_float().unwrap())?;
+        } else if self.value.is_int() {
+            s.serialize_field("value", &self.value.as_int().unwrap())?;
+        } else if self.value.is_number() {
+            s.serialize_field("value", &self.value.as_number().unwrap())?;
+        } else if self.value.is_string() {
+            s.serialize_field("value", &self.value.as_string().unwrap())?;
+        }
+        s.end()
+    }
+}
+
+#[derive(Serialize, Clone, Default, Debug)]
+pub struct Step {
+    pub model_name: String,
+    pub element_name: String,
+    pub position: Position,
+    pub data: Vec<Data>,
+}
+
 #[derive(Clone, Default, Debug)]
 pub struct Profile {
-    pub steps: VecDeque<Position>,
+    pub steps: VecDeque<Step>,
 }
 
 impl Profile {
@@ -48,7 +88,7 @@ impl Profile {
         }
     }
 
-    fn push(&mut self, step: Position) {
+    fn push(&mut self, step: Step) {
         self.steps.push_back(step);
     }
 }
@@ -150,16 +190,33 @@ impl Machine {
         true
     }
 
-    fn log_step(&mut self, step: &Position) -> Result<(), String> {
-        log::debug!("Step: {:?}", step);
+    fn log_step(&mut self, position: &Position) -> Result<Step, String> {
+        log::debug!("Position: {:?}", position);
+        let mut step = Step {
+            position: position.clone(),
+            ..Default::default()
+        };
 
-        if let Some(ctx) = self.contexts.get_mut(&step.model_id) {
-            log::debug!("Data: {:?}", ctx.eval_context);
+        if let Some(ctx) = self.contexts.get_mut(&step.position.model_id) {
+            if let Some(name) = ctx.model.name.clone() {
+                step.model_name = name;
+            }
+            if let Some(name) = ctx.model.get_name_for_id(&position.element_id) {
+                step.element_name = name;
+            }
 
-            if let Some(value) = ctx.visited_elements.get(&step.element_id) {
+            if ctx.eval_context.iter_variables().len() > 0 {
+                for (n, v) in ctx.eval_context.iter_variables() {
+                    let data = Data { name: n, value: v };
+                    step.data.push(data);
+                }
+                log::debug!("Data: {:?}", step);
+            }
+
+            if let Some(value) = ctx.visited_elements.get(&step.position.element_id) {
                 let visited = value + 1;
                 ctx.visited_elements
-                    .insert(step.clone().element_id, visited);
+                    .insert(step.clone().position.element_id, visited);
             } else {
                 let msg = format!(
                     "Expected the key {:?} to be found in unvisited_elements",
@@ -169,11 +226,11 @@ impl Machine {
                 return Err(msg);
             }
             self.profile.push(step.clone());
-            Ok(())
+            Ok(step)
         } else {
             let msg = format!(
                 "The model id {:?} was not found in the machine",
-                step.model_id
+                step.position.model_id
             );
             log::error!("{}", msg);
             Err(msg)
@@ -188,7 +245,7 @@ impl Machine {
             ctx.eval_context = HashMapContext::default();
 
             for action in &ctx.model.actions {
-                log::debug!("Will run model sction: {:?}", action);
+                log::debug!("Will run model action: {:?}", action);
 
                 match eval_with_context_mut(action, &mut ctx.eval_context) {
                     Ok(value) => {
@@ -320,7 +377,7 @@ impl Machine {
         &mut self,
         current_pos: &Position,
         model: &mut Model,
-    ) -> Result<Position, String> {
+    ) -> Result<(), String> {
         if let Some(vertex) = model.vertices.get(&current_pos.element_id) {
             // Build a list of candidates of edges to select
             // Look for shared_states
@@ -356,7 +413,7 @@ impl Machine {
             let random_index = fastrand::usize(..candidates.len());
             self.current_pos = candidates[random_index].clone();
 
-            return Ok(current_pos.clone());
+            return Ok(());
         }
 
         // If reached this code, there is something fishy going on
@@ -376,13 +433,20 @@ impl Machine {
     //     let pos = self.unvisited_edges[random_index].clone();
     // }
 
-    pub fn step(&mut self) -> Result<Position, String> {
+    pub fn step(&mut self) -> Result<Step, String> {
         let current_pos = self.current_pos.clone();
 
-        match self.log_step(&current_pos) {
-            Ok(()) => {}
+        let step = match self.log_step(&current_pos) {
+            Ok(s) => s,
             Err(err) => return Err(err),
         };
+        // let step;
+        // match self.log_step(&current_pos) {
+        //     Ok(s) => {
+        //         step = s;
+        //     }
+        //     Err(err) => return Err(err),
+        // };
 
         match self.run_action(&current_pos) {
             Ok(_) => {}
@@ -428,11 +492,18 @@ impl Machine {
         // The next element is the destination vertex.
         if let Some(edge) = model.edges.clone().get(&current_pos.clone().element_id) {
             self.current_pos.element_id = edge.target_vertex_id.as_ref().unwrap().to_string();
-            return Ok(current_pos);
+            return Ok(step);
         }
 
         // If we have not found a step yet, the next step must be a an edge.
-        self.select_next_edge(&current_pos, &mut model)
+        match self.select_next_edge(&current_pos, &mut model) {
+            Ok(()) => {}
+            Err(err) => {
+                log::error!("{}", err);
+                return Err(err);
+            }
+        }
+        Ok(step)
     }
 
     /*
@@ -451,21 +522,20 @@ impl Machine {
         ("".to_string(), Vec::default())
     }
 
-    fn run_action(&mut self, pos: &Position) -> Result<Value, String> {
+    fn run_action(&mut self, pos: &Position) -> Result<(), String> {
         let (ctx_id, actions) = self.get_actions(pos);
 
         if ctx_id.is_empty() || actions.is_empty() {
-            return Ok(Value::Empty);
+            return Ok(());
         }
 
         if let Some(ctx) = self.contexts.get_mut(&ctx_id) {
-            if let Some(action) = actions.into_iter().next() {
+            for action in actions {
                 log::debug!("Will run: {:?}", action);
 
                 match eval_with_context_mut(&action, &mut ctx.eval_context) {
                     Ok(value) => {
                         log::debug!("Action evaluated to: {:?}", value);
-                        return Ok(value);
                     }
                     Err(err) => {
                         let msg = format!(
@@ -478,7 +548,7 @@ impl Machine {
                 }
             }
         }
-        Ok(Value::Empty)
+        Ok(())
     }
 
     /*

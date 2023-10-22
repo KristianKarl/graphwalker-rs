@@ -129,6 +129,16 @@ impl Model {
         false
     }
 
+    pub fn get_name_for_id(&self, id: &String) -> Option<String> {
+        if let Some(e) = self.edges.get(id) {
+            return e.name.clone();
+        }
+        if let Some(v) = self.vertices.get(id) {
+            return v.name.clone();
+        }
+        None
+    }
+
     pub fn out_edges(&mut self, id: String) -> Vec<Edge> {
         let mut out_edges: Vec<Edge> = Vec::new();
         for edge in self.edges.values() {
