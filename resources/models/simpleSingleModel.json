@@ -1,10 +1,10 @@
 {
+    "startElementId": "v1",
     "models": [
         {
             "generator": "random(edge_coverage(100))",
             "id": "m1",
             "name": "SimpleModel",
-            "startElementId": "v1",
             "edges": [
                 {
                     "id": "e2",

@@ -9,6 +9,7 @@ pub fn read(input_file: &str) -> Models {
     error!("Feature not implemented");
 
     Models {
-        models: BTreeMap::new(),
+        models: BTreeMap::default(),
+        start_element_id: None,
     }
 }

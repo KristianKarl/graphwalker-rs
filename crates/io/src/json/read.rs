@@ -7,9 +7,14 @@ pub fn read(input_file: &str) -> Result<Models, String> {
     let res = fs::read_to_string(input_file);
     match res {
         Ok(json_str) => {
-            let models: Models = serde_json::from_str(&json_str)
-                .unwrap_or_else(|_| panic!("Unable to parse file: {}", input_file));
-            Ok(models)
+            match serde_json::from_str(&json_str) {
+                Ok(models) => return Ok(models),
+                Err(err) => {
+                    let msg = format!("Unable to parse file: {}. Failed with reason: {}", input_file, err);
+                    log::error!("{}", msg);
+                    Err(msg)
+                }
+             }
         }
         Err(why) => {
             log::error!("{:?}", why);

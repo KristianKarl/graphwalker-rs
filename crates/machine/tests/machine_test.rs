@@ -16,10 +16,10 @@ fn resource_path(resource: &str) -> std::path::PathBuf {
 
 #[test]
 fn walk_multiple_model() {
-    let mut machine = Machine::new();
+    let mut machine = Machine::default();
     machine.seed(946892979);
     let res = machine.load_models(
-        io::json_read::read(resource_path("simpleMultiModel.json").to_str().unwrap())
+        io::json_read::read(resource_path("simpleMultiModel.json").to_str().expect("Could not read the json"))
             .expect("Expexted the test file to be loaded"),
     );
     assert_eq!(res.is_ok(), true);
@@ -92,7 +92,7 @@ fn walk_multiple_model() {
 
 #[test]
 fn walk_single_model() {
-    let mut machine = Machine::new();
+    let mut machine = Machine::default();
     let res = machine.load_models(
         io::json_read::read(resource_path("simpleSingleModel.json").to_str().unwrap())
             .expect("Expexted the test file to be loaded"),
@@ -121,7 +121,7 @@ fn walk_single_model() {
 
 #[test]
 fn test_seed() {
-    let mut machine = Machine::new();
+    let mut machine = Machine::default();
     machine.seed(8739438725484);
     let index = fastrand::i32(0..1000);
     assert_eq!(index, 186);
@@ -135,7 +135,7 @@ fn test_seed() {
 
 #[test]
 fn machine() {
-    let mut machine = Machine::new();
+    let mut machine = Machine::default();
     machine.seed(1234);
     assert!(machine
         .load_models(
@@ -176,7 +176,7 @@ fn machine() {
 
 #[test]
 fn test_a_model() {
-    let mut machine = Machine::new();
+    let mut machine = Machine::default();
     assert!(machine
         .load_models(
             io::json_read::read(resource_path("petclinic.json").to_str().unwrap())

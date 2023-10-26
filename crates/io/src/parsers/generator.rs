@@ -43,7 +43,7 @@ pub fn identifier(input: &str) -> IResult<&str, &str> {
 // fn right_parantheses(input: &str) -> IResult<&str, &str> {
 //     tag(")")(input)
 // }
-
+#[allow(dead_code)]
 fn generator(input: &str) -> IResult<&str, &str> {
     let (rest, generator) = identifier(input)?;
 

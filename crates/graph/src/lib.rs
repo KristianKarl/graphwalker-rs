@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use serde_derive::{Deserialize, Serialize};
 
@@ -7,24 +8,25 @@ mod models_to_hash {
     use super::Model;
 
     use std::collections::BTreeMap;
+    use std::sync::Arc;
 
     use serde::de::{Deserialize, Deserializer};
     use serde::ser::Serializer;
 
-    pub fn serialize<S>(map: &BTreeMap<String, Model>, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(map: &BTreeMap<String, Arc<Model>>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         serializer.collect_seq(map.values())
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<BTreeMap<String, Model>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<BTreeMap<String, Arc<Model>>, D::Error>
     where
         D: Deserializer<'de>,
     {
         let mut map = BTreeMap::new();
-        for model in Vec::<Model>::deserialize(deserializer)? {
-            map.insert(model.id.clone().expect("Expected a model id"), model);
+        for model in Vec::<Arc<Model>>::deserialize(deserializer)? {
+            map.insert(model.id.clone(), model);
         }
         Ok(map)
     }
@@ -33,24 +35,28 @@ mod vertices_to_hash {
     use super::Vertex;
 
     use std::collections::BTreeMap;
+    use std::sync::Arc;
 
     use serde::de::{Deserialize, Deserializer};
     use serde::ser::Serializer;
 
-    pub fn serialize<S>(map: &BTreeMap<String, Vertex>, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(
+        map: &BTreeMap<String, Arc<Vertex>>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         serializer.collect_seq(map.values())
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<BTreeMap<String, Vertex>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<BTreeMap<String, Arc<Vertex>>, D::Error>
     where
         D: Deserializer<'de>,
     {
         let mut map = BTreeMap::new();
-        for vertex in Vec::<Vertex>::deserialize(deserializer)? {
-            map.insert(vertex.id.clone().expect("Expected a vertex id"), vertex);
+        for vertex in Vec::<Arc<Vertex>>::deserialize(deserializer)? {
+            map.insert(vertex.id.clone(), vertex);
         }
         Ok(map)
     }
@@ -60,67 +66,78 @@ mod edges_to_hash {
     use super::Edge;
 
     use std::collections::BTreeMap;
+    use std::sync::Arc;
 
     use serde::de::{Deserialize, Deserializer};
     use serde::ser::Serializer;
 
-    pub fn serialize<S>(map: &BTreeMap<String, Edge>, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(map: &BTreeMap<String, Arc<Edge>>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         serializer.collect_seq(map.values())
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<BTreeMap<String, Edge>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<BTreeMap<String, Arc<Edge>>, D::Error>
     where
         D: Deserializer<'de>,
     {
         let mut map = BTreeMap::new();
-        for edge in Vec::<Edge>::deserialize(deserializer)? {
-            map.insert(edge.id.clone().expect("Expeted an edge id"), edge);
+        for edge in Vec::<Arc<Edge>>::deserialize(deserializer)? {
+            map.insert(edge.id.clone(), edge);
         }
         Ok(map)
     }
 }
 
+enum ElementKind {
+    Model,
+    Vertex,
+    Edge,
+}
+
+trait Element {
+    fn kind(&self) -> ElementKind;
+    fn id(&self) -> &str;
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct Models {
+    pub start_element_id: Option<String>,
+
     #[serde(with = "models_to_hash")]
-    pub models: BTreeMap<String, Model>,
+    pub models: BTreeMap<String, Arc<Model>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Model {
-    pub id: Option<String>,
+    pub id: String,
     pub name: Option<String>,
 
     #[serde(with = "vertices_to_hash")]
-    pub vertices: BTreeMap<String, Vertex>,
+    pub vertices: BTreeMap<String, Arc<Vertex>>,
 
     #[serde(with = "edges_to_hash")]
-    pub edges: BTreeMap<String, Edge>,
+    pub edges: BTreeMap<String, Arc<Edge>>,
 
     pub generator: Option<String>,
-    pub start_element_id: Option<String>,
     #[serde(default)]
     pub actions: Vec<String>,
 }
 
-impl Model {
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            id: None,
-            name: None,
-            vertices: BTreeMap::new(),
-            edges: BTreeMap::new(),
-            generator: None,
-            start_element_id: None,
-            actions: vec![],
-        }
+impl Element for Model {
+    fn kind(&self) -> ElementKind {
+        ElementKind::Model
     }
 
+    fn id(&self) -> &str {
+        self.id.as_str()
+    }
+}
+
+impl Model {
     #[must_use]
     pub fn has_id(&self, id: String) -> bool {
         if self.edges.contains_key(&id) || self.vertices.contains_key(&id) {
@@ -139,15 +156,10 @@ impl Model {
         None
     }
 
-    pub fn out_edges(&mut self, id: String) -> Vec<Edge> {
-        let mut out_edges: Vec<Edge> = Vec::new();
+    pub fn out_edges(&self, id: String) -> Vec<Arc<Edge>> {
+        let mut out_edges: Vec<Arc<Edge>> = Vec::new();
         for edge in self.edges.values() {
-            if edge
-                .source_vertex_id
-                .clone()
-                .expect("Expected a source vertex id")
-                == id
-            {
+            if edge.source_vertex_id == id {
                 out_edges.push(edge.clone());
             }
         }
@@ -158,7 +170,7 @@ impl Model {
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Vertex {
-    pub id: Option<String>,
+    pub id: String,
     pub name: Option<String>,
     pub shared_state: Option<String>,
 
@@ -169,21 +181,19 @@ pub struct Vertex {
     pub actions: Vec<String>,
 }
 
-impl Vertex {
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            id: None,
-            name: None,
-            shared_state: None,
-            requirements: vec![],
-            actions: vec![],
-        }
+impl Element for Vertex {
+    fn kind(&self) -> ElementKind {
+        ElementKind::Vertex
     }
 
-    #[must_use]
-    pub fn id(mut self, id: String) -> Self {
-        self.id = Some(id);
+    fn id(&self) -> &str {
+        self.id.as_str()
+    }
+}
+
+impl Vertex {
+    pub fn id(mut self, id: &str) -> Self {
+        self.id = id.to_string();
         self
     }
 }
@@ -191,7 +201,7 @@ impl Vertex {
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Edge {
-    pub id: Option<String>,
+    pub id: String,
     pub name: Option<String>,
 
     #[serde(default)]
@@ -202,39 +212,25 @@ pub struct Edge {
 
     pub guard: Option<String>,
 
-    pub source_vertex_id: Option<String>,
-    pub target_vertex_id: Option<String>,
+    pub source_vertex_id: String,
+    pub target_vertex_id: String,
+}
+
+impl Element for Edge {
+    fn kind(&self) -> ElementKind {
+        ElementKind::Edge
+    }
+
+    fn id(&self) -> &str {
+        self.id.as_str()
+    }
 }
 
 impl Edge {
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            id: None,
-            name: None,
-            source_vertex_id: None,
-            target_vertex_id: None,
-            guard: None,
-            requirements: vec![],
-            actions: vec![],
-        }
-    }
-
-    #[must_use]
-    pub fn id(mut self, id: String) -> Self {
-        self.id = Some(id);
-        self
-    }
-
-    #[must_use]
-    pub fn source_vertex_id(mut self, id: String) -> Self {
-        self.source_vertex_id = Some(id);
-        self
-    }
-
-    #[must_use]
-    pub fn target_vertex_id(mut self, id: String) -> Self {
-        self.target_vertex_id = Some(id);
+    pub fn id(mut self, id: &str, src: &str, dst: &str) -> Self {
+        self.id = id.to_string();
+        self.source_vertex_id = src.to_string();
+        self.target_vertex_id = dst.to_string();
         self
     }
 }
@@ -246,29 +242,23 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     fn create_model() -> Model {
-        let mut model: Model = Model::new();
+        let mut model: Model = Model::default();
         model
             .vertices
-            .insert("a".to_string(), Vertex::new().id("a".to_string()));
+            .insert("a".to_string(), Arc::new(Vertex::default().id("a")));
         model
             .vertices
-            .insert("b".to_string(), Vertex::new().id("b".to_string()));
+            .insert("b".to_string(), Arc::new(Vertex::default().id("b")));
         model
             .vertices
-            .insert("c".to_string(), Vertex::new().id("c".to_string()));
+            .insert("c".to_string(), Arc::new(Vertex::default().id("c")));
         model.edges.insert(
             "a->b".to_string(),
-            Edge::new()
-                .id("a->b".to_string())
-                .source_vertex_id("a".to_string())
-                .target_vertex_id("a".to_string()),
+            Arc::new(Edge::default().id("a->b", "a", "a")),
         );
         model.edges.insert(
             "b->c".to_string(),
-            Edge::new()
-                .id("b->c".to_string())
-                .source_vertex_id("b".to_string())
-                .target_vertex_id("c".to_string()),
+            Arc::new(Edge::default().id("b->c", "b", "c")),
         );
         model
     }
@@ -284,7 +274,7 @@ mod tests {
     fn get_vertex_test() {
         let model = create_model();
         let v = model.vertices.get("a").unwrap();
-        assert_eq!(v.id.clone().unwrap(), "a");
+        assert_eq!(v.id, "a");
 
         let v = model.vertices.get("x");
         assert!(v.is_none());
@@ -294,7 +284,7 @@ mod tests {
     fn get_edge_test() {
         let model = create_model();
         let a = model.edges.get("b->c").unwrap();
-        assert_eq!(a.id.clone().unwrap(), "b->c");
+        assert_eq!(a.id, "b->c");
 
         let b = model.edges.get("x");
         assert!(b.is_none());
@@ -314,10 +304,10 @@ mod tests {
 
     #[test]
     fn serialize_vertex() {
-        let vertex = Vertex::new();
+        let vertex = Vertex::default();
         let vertex_json_str = serde_json::to_string_pretty(&vertex).unwrap();
         let v: Vertex = serde_json::from_str(vertex_json_str.as_str()).expect("Test failed");
-        assert!(v.id.is_none());
+        assert!(v.id.is_empty());
         assert!(v.name.is_none());
         assert!(v.requirements.is_empty());
         assert!(v.actions.is_empty());
@@ -335,7 +325,7 @@ mod tests {
             "requirements": []
         }"#;
         let v: Vertex = serde_json::from_str(vertex_json_str).expect("Test failed");
-        assert_eq!(v.id.unwrap(), "n1");
+        assert_eq!(v.id, "n1");
         assert_eq!(v.name.unwrap(), "v_ClientNotRunning");
         assert_eq!(v.shared_state.unwrap(), "CLIENT_NOT_RUNNNG");
         assert!(v.actions.is_empty());
@@ -347,7 +337,7 @@ mod tests {
             "name": "v_ClientNotRunning"
         }"#;
         let v: Vertex = serde_json::from_str(vertex_json_str).expect("Test failed");
-        assert_eq!(v.id.unwrap(), "n1");
+        assert_eq!(v.id, "n1");
         assert_eq!(v.name.unwrap(), "v_ClientNotRunning");
         assert!(v.shared_state.is_none());
         assert!(v.actions.is_empty());

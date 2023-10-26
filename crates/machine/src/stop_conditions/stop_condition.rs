@@ -1,23 +1,42 @@
-pub trait IsFullfilled {
+#[derive(Debug, PartialEq)]
+pub enum StopConditionKind {
+    EdgeCoverage,
+    VertexCoverage,
+}
+
+impl core::fmt::Display for StopConditionKind {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        match *self {
+            StopConditionKind::EdgeCoverage => write!(f, "EdgeCoverage"),
+            StopConditionKind::VertexCoverage => write!(f, "VertexCoverage"),
+        }
+    }
+}
+
+
+pub trait StopCondition {
+    fn kind(&self) -> StopConditionKind;
     fn is_fullfilled(&self) -> bool;
 }
 
-pub trait StopCondition {
-    fn condition_type(&self) -> &str;
+// https://users.rust-lang.org/t/derive-debug-not-playing-well-with-dyn/52398
+impl<'a> core::fmt::Debug for dyn StopCondition + 'a {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.kind()) 
+    }
 }
 
+#[derive(Default, Clone, Debug)]
 pub struct EdgeCoverage {
     coverage: f32,
     fullfilment: f32,
 }
 
 impl StopCondition for EdgeCoverage {
-    fn condition_type(&self) -> &str {
-        "EdgeCoverage"
+    fn kind(&self) -> StopConditionKind {
+        StopConditionKind::EdgeCoverage
     }
-}
 
-impl IsFullfilled for EdgeCoverage {
     fn is_fullfilled(&self) -> bool {
         self.fullfilment >= self.coverage
     }
@@ -32,18 +51,17 @@ impl EdgeCoverage {
     }
 }
 
+#[derive(Default, Clone, Debug)]
 pub struct VertexCoverage {
     coverage: f32,
     fullfilment: f32,
 }
 
 impl StopCondition for VertexCoverage {
-    fn condition_type(&self) -> &str {
-        "VertexCoverage"
+    fn kind(&self) -> StopConditionKind {
+        StopConditionKind::VertexCoverage
     }
-}
 
-impl IsFullfilled for VertexCoverage {
     fn is_fullfilled(&self) -> bool {
         self.fullfilment >= self.coverage
     }
@@ -67,8 +85,8 @@ mod tests {
     fn edge_coverage() {
         let edge_coverage = EdgeCoverage::new(1f32);
         assert_eq!(
-            edge_coverage.condition_type(),
-            "EdgeCoverage",
+            edge_coverage.kind(),
+            StopConditionKind::EdgeCoverage,
             "Incorrect condition type found"
         );
         assert_eq!(
@@ -82,8 +100,8 @@ mod tests {
     fn vertex_coverage() {
         let vertex_coverage = VertexCoverage::new(1f32);
         assert_eq!(
-            vertex_coverage.condition_type(),
-            "VertexCoverage",
+            vertex_coverage.kind(),
+            StopConditionKind::VertexCoverage,
             "Incorrect condition type found"
         );
         assert_eq!(

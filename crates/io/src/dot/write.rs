@@ -12,9 +12,9 @@ pub fn write(models: Models) {
             let v = n.1;
             println!(
                 "  {} [label=\"{}\\nid: {}\"]",
-                v.id.clone().expect("An id for the vertex."),
+                v.id,
                 v.name.clone().expect("A name for the vertex."),
-                v.id.clone().expect("An id for the vertex.")
+                v.id
             );
         }
 
@@ -26,20 +26,16 @@ pub fn write(models: Models) {
                 "  {} -> {} [label=\"{}\\nid: {}",
                 &model
                     .vertices
-                    .get(&edge.source_vertex_id.clone().expect("Source vertex id"))
+                    .get(&edge.source_vertex_id)
                     .expect("Source vertex")
-                    .id
-                    .clone()
-                    .expect("Source vertex name"),
+                    .id,
                 &model
                     .vertices
-                    .get(&edge.target_vertex_id.clone().expect("Target vertex id"))
+                    .get(&edge.target_vertex_id)
                     .expect("Target vertex")
-                    .id
-                    .clone()
-                    .expect("Target vertex name"),
+                    .id,
                 edge.name.clone().expect("Edge name"),
-                edge.id.clone().expect("Edge id")
+                edge.id
             );
             if edge.guard.is_some() {
                 print!(
