@@ -1,4 +1,5 @@
 {
+    "startElementId": "n1",
     "models": [
         {
             "name": "Login",
@@ -132,8 +133,7 @@
                     "sourceVertexId": "n2",
                     "targetVertexId": "n2"
                 }
-            ],
-            "startElementId": "n1"
+            ]
         }
     ]
 }

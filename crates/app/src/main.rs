@@ -142,7 +142,7 @@ fn main() {
                 }
             };
 
-            let mut machine = machine::Machine::new();
+            let mut machine = machine::Machine::default();
             let res = machine.load_models(models);
             if res.is_err() {
                 error!("{:?}", res.err());
@@ -182,7 +182,7 @@ fn main() {
                 }
             };
 
-            let mut machine = machine::Machine::new();
+            let mut machine = machine::Machine::default();
             let res = machine.load_models(models);
             if res.is_err() {
                 error!("{:?}", res.err());

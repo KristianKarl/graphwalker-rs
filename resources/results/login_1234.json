@@ -1,0 +1,434 @@
+[
+    {
+        "model_name": "Login",
+        "element_name": "v_ClientNotRunning",
+        "position": {
+            "model_id": "login",
+            "element_id": "n1"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": false
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "e_StartClient",
+        "position": {
+            "model_id": "login",
+            "element_id": "e1"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": false
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "v_LoginPrompted",
+        "position": {
+            "model_id": "login",
+            "element_id": "n2"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": false
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "e_InvalidCredentials",
+        "position": {
+            "model_id": "login",
+            "element_id": "e8"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": false
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "v_LoginPrompted",
+        "position": {
+            "model_id": "login",
+            "element_id": "n2"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": false
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "e_Close",
+        "position": {
+            "model_id": "login",
+            "element_id": "e6"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": false
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "v_ClientNotRunning",
+        "position": {
+            "model_id": "login",
+            "element_id": "n1"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": false
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "e_StartClient",
+        "position": {
+            "model_id": "login",
+            "element_id": "e1"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": false
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "v_LoginPrompted",
+        "position": {
+            "model_id": "login",
+            "element_id": "n2"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": false
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "e_ToggleRememberMe",
+        "position": {
+            "model_id": "login",
+            "element_id": "e5"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": false
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "v_LoginPrompted",
+        "position": {
+            "model_id": "login",
+            "element_id": "n2"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "e_InvalidCredentials",
+        "position": {
+            "model_id": "login",
+            "element_id": "e8"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "v_LoginPrompted",
+        "position": {
+            "model_id": "login",
+            "element_id": "n2"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "e_Close",
+        "position": {
+            "model_id": "login",
+            "element_id": "e6"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "v_ClientNotRunning",
+        "position": {
+            "model_id": "login",
+            "element_id": "n1"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "e_StartClient",
+        "position": {
+            "model_id": "login",
+            "element_id": "e1"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "v_LoginPrompted",
+        "position": {
+            "model_id": "login",
+            "element_id": "n2"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "e_ValidPremiumCredentials",
+        "position": {
+            "model_id": "login",
+            "element_id": "e2"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": false
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "v_Browse",
+        "position": {
+            "model_id": "login",
+            "element_id": "n3"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": true
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "e_Exit",
+        "position": {
+            "model_id": "login",
+            "element_id": "e4"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": true
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "v_ClientNotRunning",
+        "position": {
+            "model_id": "login",
+            "element_id": "n1"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": true
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "e_StartClient",
+        "position": {
+            "model_id": "login",
+            "element_id": "e7"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": true
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "v_Browse",
+        "position": {
+            "model_id": "login",
+            "element_id": "n3"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": true
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    },
+    {
+        "model_name": "Login",
+        "element_name": "e_Logout",
+        "position": {
+            "model_id": "login",
+            "element_id": "e3"
+        },
+        "data": [
+            {
+                "name": "validLogin",
+                "value": true
+            },
+            {
+                "name": "rememberMe",
+                "value": true
+            }
+        ]
+    }
+]

@@ -1,17 +1,9 @@
 use evalexpr::*;
-use generator::Generator;
-use graph::Model;
-use graph::Models;
+//use generator::Generator;
+use graph::{Model, Models};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use serde_derive::{Deserialize, Serialize};
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::{
-    cmp::Ordering,
-    collections::{BTreeMap, VecDeque},
-};
-
-use crate::generator::RandomGenerator;
+use std::collections::{BTreeMap, VecDeque};
 
 #[path = "stop_conditions/stop_condition.rs"]
 pub mod stop_condition;
@@ -31,13 +23,6 @@ impl Position {
             model_id: ctx_id,
             element_id: elem_id,
         }
-    }
-
-    fn is_valid(&self) -> bool {
-        if self.model_id.is_empty() || self.element_id.is_empty() {
-            return false;
-        }
-        true
     }
 }
 
@@ -86,12 +71,6 @@ pub struct Profile {
 }
 
 impl Profile {
-    fn new() -> Self {
-        Self {
-            steps: VecDeque::new(),
-        }
-    }
-
     fn push(&mut self, step: Step) {
         self.steps.push_back(step);
     }
@@ -100,11 +79,11 @@ impl Profile {
 #[derive(Default, Clone, Debug)]
 pub struct Context {
     id: String,
-    model: Arc<Model>,
+    model: Model,
     fullfillment: f32,
     visited_elements: BTreeMap<String, u32>,
     eval_context: evalexpr::HashMapContext,
-    generators: Vec<Arc<dyn Generator>>,
+    //generators: Vec<Rc<dyn Generator>>,
 }
 
 impl Context {
@@ -156,7 +135,7 @@ pub struct SharedState {
 
 #[derive(Default, Debug, Clone)]
 pub struct Machine {
-    pub contexts: BTreeMap<String, Arc<Mutex<Context>>>,
+    pub contexts: BTreeMap<String, Context>,
     pub profile: Profile,
     current_pos: Position,
     pub start_pos: Position,
@@ -168,12 +147,11 @@ pub struct Machine {
 impl Machine {
     pub fn is_all_fullfilled(&self) -> bool {
         for ctx in self.contexts.values() {
-            let c = ctx.lock().unwrap();
-            if !c.is_fullfilled() {
-                log::debug!("The model: {:?} is not fullfilled", c.id);
+            if !ctx.is_fullfilled() {
+                log::debug!("The model: {:?} is not fullfilled", ctx.id);
                 return false;
             }
-            log::debug!("The model: {:?} is fullfilled", c.id);
+            log::debug!("The model: {:?} is fullfilled", ctx.id);
         }
         log::debug!("All models are fullfilled");
         true
@@ -187,25 +165,24 @@ impl Machine {
         };
 
         if let Some(ctx) = self.contexts.get_mut(&step.position.model_id) {
-            let mut c = ctx.lock().unwrap();
-            if let Some(name) = c.model.name.clone() {
+            if let Some(name) = ctx.model.name.clone() {
                 step.model_name = name;
             }
-            if let Some(name) = c.model.get_name_for_id(&position.element_id) {
+            if let Some(name) = ctx.model.get_name_for_id(&position.element_id) {
                 step.element_name = name;
             }
 
-            if c.eval_context.iter_variables().len() > 0 {
-                for (n, v) in c.eval_context.iter_variables() {
+            if ctx.eval_context.iter_variables().len() > 0 {
+                for (n, v) in ctx.eval_context.iter_variables() {
                     let data = Data { name: n, value: v };
                     step.data.push(data);
                 }
                 log::debug!("Data: {:?}", step);
             }
 
-            if let Some(value) = c.visited_elements.get(&step.position.element_id) {
+            if let Some(value) = ctx.visited_elements.get(&step.position.element_id) {
                 let visited = value + 1;
-                c.visited_elements
+                ctx.visited_elements
                     .insert(step.position.clone().element_id, visited);
             } else {
                 let msg = format!(
@@ -232,13 +209,12 @@ impl Machine {
         log::info!("The seed is: {:?}", fastrand::get_seed());
 
         for ctx in self.contexts.values_mut() {
-            let mut c = ctx.lock().unwrap();
-            c.eval_context = HashMapContext::default();
+            ctx.eval_context = HashMapContext::default();
 
-            for action in c.model.actions.clone() {
+            for action in ctx.model.actions.clone() {
                 log::debug!("Will run model action: {:?}", action);
 
-                match eval_with_context_mut(action.as_str(), &mut c.eval_context) {
+                match eval_with_context_mut(action.as_str(), &mut ctx.eval_context) {
                     Ok(value) => {
                         log::debug!("Action evaluated to: {:?}", value);
                     }
@@ -263,9 +239,7 @@ impl Machine {
 
         // Find the model in which the start element id exists
         for (key, ctx) in &self.contexts {
-            let c = ctx.lock().unwrap();
-
-            if c.model.has_id(self.start_pos.element_id.clone()) {
+            if ctx.model.has_id(self.start_pos.element_id.clone()) {
                 self.start_pos.model_id = key.to_string();
             }
         }
@@ -283,18 +257,17 @@ impl Machine {
         // Reset visited elements and unvisited edges
         self.unvisited_edges = Vec::default();
         for (key, ctx) in &mut self.contexts {
-            let mut c = ctx.lock().unwrap();
             let mut visited_elements = BTreeMap::new();
             let mut unvisited_edges = Vec::new();
 
-            for k in c.model.edges.keys() {
+            for k in ctx.model.edges.keys() {
                 visited_elements.insert(k.to_string(), 0);
                 unvisited_edges.push(Position::new(key.to_string(), k.to_string()));
             }
-            for k in c.model.vertices.keys() {
+            for k in ctx.model.vertices.keys() {
                 visited_elements.insert(k.to_string(), 0);
             }
-            c.visited_elements = visited_elements;
+            ctx.visited_elements = visited_elements;
             self.unvisited_edges.extend(unvisited_edges);
         }
 
@@ -325,16 +298,14 @@ impl Machine {
                 return Err(msg);
             }
 
-            let mut context = Context::default();
-            context.id = key.clone();
-            context.model = model.clone();
-            context.fullfillment = 1f32;
-            context
-                .generators
-                .push(Arc::new(RandomGenerator::default()));
+            let context = Context {
+                id: key.clone(),
+                model: model.clone(),
+                fullfillment: 1f32,
+                ..Default::default()
+            };
 
-            self.contexts
-                .insert(key.clone(), Arc::new(Mutex::new(context)));
+            self.contexts.insert(key.clone(), context);
 
             // Populate list of shared states.
             for (k, v) in &model.vertices {
@@ -345,9 +316,11 @@ impl Machine {
                         .filter(|x| &x.name == name)
                         .count();
 
-                    if c > 0 {
-                        let mut s = SharedState::default();
-                        s.name = name.to_string();
+                    if c == 0 {
+                        let mut s = SharedState {
+                            name: name.to_string(),
+                            ..Default::default()
+                        };
                         s.positions.push(Position {
                             model_id: key.clone(),
                             element_id: k.to_string(),
@@ -387,7 +360,7 @@ impl Machine {
         };
 
         if let Some(ctx) = self.contexts.get_mut(&current_pos.model_id) {
-            let model = &ctx.lock().unwrap().model;
+            let model = &ctx.model;
             // Check that the element does exist in the model
             if !model.has_id(current_pos.clone().element_id) {
                 let msg = format!(
@@ -409,19 +382,97 @@ impl Machine {
 
         // If we have not found a step yet, the next step must be a an edge.
         // First use the current generator strategy.
-        if let Some(ctx) = self.contexts.get_mut(&current_pos.model_id) {
-            if let Some(generator) = ctx.lock().unwrap().generators.get_mut(0) {
-                match generator.get_next_edge(Arc::clone(&ctx), &self.shared_states, current_pos) {
-                    Ok(pos) => self.current_pos = pos,
-                    Err(err) => {
-                        let msg = format!("get next step failed: {}", err);
-                        log::error!("{}", msg);
-                        return Err(msg);
-                    }
+        if let Some(mut ctx) = self.contexts.get_mut(&current_pos.model_id).cloned() {
+            match self.get_next_edge(&mut ctx) {
+                Ok(pos) => self.current_pos = pos,
+                Err(err) => {
+                    let msg = format!("get next step failed: {}", err);
+                    log::error!("{}", msg);
+                    return Err(msg);
                 }
             }
         }
         Ok(step)
+    }
+
+    fn get_next_edge(&self, ctx: &mut Context) -> Result<Position, String> {
+        if let Some(vertex) = ctx.model.vertices.get(&self.current_pos.element_id) {
+            // Build a list of candidates of edges to select
+            // Look for shared_states
+            let mut candidates: Vec<Position> = Vec::new();
+            if let Some(name) = vertex.shared_state.clone() {
+                for shared_state in self.shared_states.clone() {
+                    if shared_state.name == name {
+                        candidates.clone_from(&shared_state.positions);
+                        break;
+                    }
+                }
+
+                // Remove the current vertex from the candidate list, since we are already at it.
+                let index = candidates
+                    .iter()
+                    .position(|x| *x == self.current_pos.clone())
+                    .unwrap();
+                candidates.remove(index);
+            }
+
+            for e in ctx.model.out_edges(self.current_pos.element_id.clone()) {
+                let pos = Position {
+                    model_id: self.current_pos.model_id.clone(),
+                    element_id: e.id.clone(),
+                };
+                if self.is_selectable(&mut ctx.eval_context, e.guard) {
+                    log::trace!("Adding {:?} to the candidates list", pos);
+                    candidates.push(pos);
+                }
+            }
+
+            if candidates.is_empty() {
+                // Vertex is a cul-de-sac
+                let msg = format!("Vertex {} is a cul-de-sac", self.current_pos.element_id);
+                log::warn!("{}", msg);
+                return Err(msg);
+            }
+
+            let random_index = fastrand::usize(..candidates.len());
+            return Ok(candidates[random_index].clone());
+        }
+
+        // If reached this code, there is something fishy going on
+        let msg = format!(
+            "Could not find vertex nor edge matching the current position: {:?}",
+            self.current_pos
+        );
+        log::warn!("{}", msg);
+        Err(msg)
+    }
+
+    fn is_selectable(&self, eval_context: &mut HashMapContext, guard: Option<String>) -> bool {
+        if let Some(guard) = guard.clone() {
+            log::debug!("Edge has guard: {:?}", guard);
+
+            match eval_with_context_mut(&guard, eval_context) {
+                Ok(value) => match value.as_boolean() {
+                    Ok(res) => {
+                        log::debug!("The guard evaluated to: {:?}", res);
+                        return res;
+                    }
+                    Err(err) => {
+                        let msg =
+                            format!("Evaluating guard {:?}, failed with error: {:?}", guard, err);
+                        log::error!("{}", msg);
+                        return true;
+                    }
+                },
+                Err(err) => {
+                    let msg = format!("Evaluating guard {:?}, failed with error: {:?}", guard, err);
+                    log::error!("{}", msg);
+                    return true;
+                }
+            }
+        }
+        log::trace!("No guard");
+        true
     }
 
     /*
@@ -430,12 +481,10 @@ impl Machine {
      */
     fn get_actions(&self, pos: &Position) -> (String, Vec<String>) {
         for (k, ctx) in &self.contexts {
-            let c = ctx.lock().unwrap();
-
-            if let Some(edge) = c.model.edges.get(&pos.element_id) {
+            if let Some(edge) = ctx.model.edges.get(&pos.element_id) {
                 return (k.clone(), edge.actions.clone());
             }
-            if let Some(vertex) = c.model.vertices.get(&pos.element_id) {
+            if let Some(vertex) = ctx.model.vertices.get(&pos.element_id) {
                 return (k.clone(), vertex.actions.clone());
             }
         }
@@ -451,10 +500,9 @@ impl Machine {
 
         if let Some(ctx) = self.contexts.get_mut(&ctx_id) {
             for action in actions {
-                let mut c = ctx.lock().unwrap();
                 log::debug!("Will run: {:?}", action);
 
-                match eval_with_context_mut(&action, &mut c.eval_context) {
+                match eval_with_context_mut(&action, &mut ctx.eval_context) {
                     Ok(value) => {
                         log::debug!("Action evaluated to: {:?}", value);
                     }

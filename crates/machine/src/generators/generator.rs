@@ -1,9 +1,9 @@
-use std::sync::{Arc, Mutex};
+use std::{rc::Rc, cell::RefCell};
 
 use evalexpr::eval_with_context_mut;
 use graph::Edge;
 
-use crate::{stop_condition::StopCondition, Context, Machine, Position, SharedState};
+use crate::{stop_condition::StopCondition, Context, Position, SharedState};
 
 #[derive(Debug, PartialEq)]
 pub enum GeneratorKind {
@@ -22,8 +22,7 @@ pub trait Generator {
     fn kind(&self) -> GeneratorKind;
     fn get_next_edge(
         &self,
-        context: Arc<Mutex<Context>>,
-        shared_states: &Vec<SharedState>,
+        shared_states: &[SharedState],
         current_pos: Position,
     ) -> Result<Position, String>;
     fn is_fullfilled(&self) -> bool;
@@ -38,7 +37,8 @@ impl<'a> core::fmt::Debug for dyn Generator + 'a {
 
 #[derive(Debug, Default)]
 pub struct RandomGenerator {
-    stop_conditions: Vec<Arc<dyn StopCondition>>,
+    stop_conditions: Vec<Rc<dyn StopCondition>>,
+    context: Rc::<RefCell::<Context>>,
 }
 
 impl Generator for RandomGenerator {
@@ -48,17 +48,11 @@ impl Generator for RandomGenerator {
 
     fn get_next_edge(
         &self,
-        ctx: Arc<Mutex<Context>>,
-        shared_states: &Vec<SharedState>,
+        shared_states: &[SharedState],
         current_pos: Position,
     ) -> Result<Position, String> {
-        if let Some(vertex) = ctx
-            .lock()
-            .unwrap()
-            .model
-            .vertices
-            .get(&current_pos.element_id)
-        {
+        let c = self.context.borrow_mut();
+        if let Some(vertex) = c.model.vertices.get(&current_pos.element_id) {
             // Build a list of candidates of edges to select
             // Look for shared_states
             let mut candidates: Vec<Position> = Vec::new();
@@ -78,17 +72,12 @@ impl Generator for RandomGenerator {
                 candidates.remove(index);
             }
 
-            for e in ctx
-                .lock()
-                .unwrap()
-                .model
-                .out_edges(current_pos.element_id.clone())
-            {
+            for e in c.model.out_edges(current_pos.element_id.clone()) {
                 let pos = Position {
                     model_id: current_pos.model_id.clone(),
                     element_id: e.id.clone(),
                 };
-                if self.is_selectable(ctx.clone(), &e) {
+                if self.is_selectable(&e) {
                     log::trace!("Adding {:?} to the candidates list", pos);
                     candidates.push(pos);
                 }
@@ -125,11 +114,19 @@ impl Generator for RandomGenerator {
 }
 
 impl RandomGenerator {
-    fn is_selectable(&self, ctx: Arc<Mutex<Context>>, e: &Edge) -> bool {
+    pub fn new(_ctx: Rc<RefCell<Context>>) -> Self {
+        Self {
+            context: Rc::default(),
+            stop_conditions: Vec::default(),
+        }
+    }
+
+    fn is_selectable(&self, e: &Edge) -> bool {
         if let Some(guard) = e.guard.clone() {
             log::debug!("Edge has guard: {:?}", guard);
 
-            match eval_with_context_mut(&guard, &mut ctx.lock().unwrap().eval_context) {
+            let mut c = self.context.borrow_mut();
+            match eval_with_context_mut(&guard, &mut c.eval_context) {
                 Ok(value) => match value.as_boolean() {
                     Ok(res) => {
                         log::debug!("The guard evaluated to: {:?}", res);
@@ -166,7 +163,7 @@ mod tests {
         let mut random = RandomGenerator::default();
 
         let edge_coverage = EdgeCoverage::new(0f32);
-        random.stop_conditions.push(Arc::new(edge_coverage));
+        random.stop_conditions.push(Rc::new(edge_coverage));
 
         assert_eq!(random.is_fullfilled(), true, "Should be false");
         assert_eq!(

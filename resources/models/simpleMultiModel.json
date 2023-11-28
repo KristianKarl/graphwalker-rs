@@ -1,42 +1,42 @@
 {
+    "startElementId": "v11",
     "models": [
         {
             "generator": "random(edge_coverage(100))",
             "id": "m1",
             "name": "Model 1",
-            "startElementId": "v1",
             "edges": [
                 {
-                    "id": "e2",
-                    "name": "e2",
-                    "sourceVertexId": "v1",
-                    "targetVertexId": "v2"
+                    "id": "e12",
+                    "name": "e12",
+                    "sourceVertexId": "v11",
+                    "targetVertexId": "v12"
                 },
                 {
-                    "id": "e3",
-                    "name": "e3",
-                    "sourceVertexId": "v2",
-                    "targetVertexId": "v3"
+                    "id": "e13",
+                    "name": "e13",
+                    "sourceVertexId": "v12",
+                    "targetVertexId": "v13"
                 },
                 {
-                    "id": "e1",
-                    "name": "e1",
-                    "sourceVertexId": "v3",
-                    "targetVertexId": "v1"
+                    "id": "e11",
+                    "name": "e11",
+                    "sourceVertexId": "v13",
+                    "targetVertexId": "v11"
                 }
             ],
             "vertices": [
                 {
-                    "id": "v1",
-                    "name": "v1"
+                    "id": "v11",
+                    "name": "v11"
                 },
                 {
-                    "id": "v2",
-                    "name": "v2"
+                    "id": "v12",
+                    "name": "v12"
                 },
                 {
-                    "id": "v3",
-                    "name": "v3",
+                    "id": "v13",
+                    "name": "v13",
                     "sharedState": "A SHARED STATE"
                 }
             ]
@@ -45,40 +45,39 @@
             "generator": "random(edge_coverage(100))",
             "id": "m2",
             "name": "Model 2",
-            "startElementId": "v1",
             "edges": [
                 {
-                    "id": "e2",
-                    "name": "e2",
-                    "sourceVertexId": "v1",
-                    "targetVertexId": "v2"
+                    "id": "e22",
+                    "name": "e22",
+                    "sourceVertexId": "v21",
+                    "targetVertexId": "v22"
                 },
                 {
-                    "id": "e3",
-                    "name": "e3",
-                    "sourceVertexId": "v2",
-                    "targetVertexId": "v3"
+                    "id": "e23",
+                    "name": "e23",
+                    "sourceVertexId": "v22",
+                    "targetVertexId": "v23"
                 },
                 {
-                    "id": "e1",
-                    "name": "e1",
-                    "sourceVertexId": "v3",
-                    "targetVertexId": "v1"
+                    "id": "e21",
+                    "name": "e21",
+                    "sourceVertexId": "v23",
+                    "targetVertexId": "v21"
                 }
             ],
             "vertices": [
                 {
-                    "id": "v1",
-                    "name": "v1"
+                    "id": "v21",
+                    "name": "v21"
                 },
                 {
-                    "id": "v2",
-                    "name": "v2",
+                    "id": "v22",
+                    "name": "v22",
                     "sharedState": "A SHARED STATE"
                 },
                 {
-                    "id": "v3",
-                    "name": "v3"
+                    "id": "v23",
+                    "name": "v23"
                 }
             ]
         }

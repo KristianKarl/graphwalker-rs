@@ -944,9 +944,9 @@ checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
 
 [[package]]
 name = "parse-hyperlinks"
-version = "0.26.1"
+version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78b783f0a6d74d9b640f4959edaccdf60372f6aa8c4e9956dc0a7399b816014c"
+checksum = "92ac700657cc7a89620d1c28b310d594ff0491c11fd3dd1ae748ed5c5c8640e6"
 dependencies = [
  "html-escape",
  "nom",

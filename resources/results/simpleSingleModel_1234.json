@@ -1,0 +1,56 @@
+[
+    {
+        "model_name": "SimpleModel",
+        "element_name": "v1",
+        "position": {
+            "model_id": "m1",
+            "element_id": "v1"
+        },
+        "data": []
+    },
+    {
+        "model_name": "SimpleModel",
+        "element_name": "e2",
+        "position": {
+            "model_id": "m1",
+            "element_id": "e2"
+        },
+        "data": []
+    },
+    {
+        "model_name": "SimpleModel",
+        "element_name": "v2",
+        "position": {
+            "model_id": "m1",
+            "element_id": "v2"
+        },
+        "data": []
+    },
+    {
+        "model_name": "SimpleModel",
+        "element_name": "e3",
+        "position": {
+            "model_id": "m1",
+            "element_id": "e3"
+        },
+        "data": []
+    },
+    {
+        "model_name": "SimpleModel",
+        "element_name": "v3",
+        "position": {
+            "model_id": "m1",
+            "element_id": "v3"
+        },
+        "data": []
+    },
+    {
+        "model_name": "SimpleModel",
+        "element_name": "e1",
+        "position": {
+            "model_id": "m1",
+            "element_id": "e1"
+        },
+        "data": []
+    }
+]

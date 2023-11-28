@@ -1,6 +1,9 @@
+use std::fs;
+
 use assert_json_diff::assert_json_eq;
-use machine::{Machine, Position};
+use machine::Machine;
 use rest::{init_machine, routes};
+use serde_json::Value;
 
 fn resource_path(resource: &str) -> std::path::PathBuf {
     let mut path = std::path::PathBuf::new();
@@ -8,14 +11,13 @@ fn resource_path(resource: &str) -> std::path::PathBuf {
     path.push("..");
     path.push("..");
     path.push("resources");
-    path.push("models");
     path.push(resource);
     path
 }
 
 #[tokio::test]
 async fn get_next_bad_request() {
-    let m = init_machine(Machine::new());
+    let m = init_machine(Machine::default());
     let graphwalker_routes = routes::graphwalker_routes(m);
 
     let res = warp::test::request() // 2.
@@ -30,11 +32,7 @@ async fn get_next_bad_request() {
 
 #[tokio::test]
 async fn login_model() {
-    let file_read_result = io::read(
-        resource_path("login.json")
-            .to_str()
-            .expect("The login.json file to be readable"),
-    );
+    let file_read_result = io::read(resource_path("models/login.json").to_str().unwrap());
     let models = match file_read_result {
         Ok(models) => models,
         Err(error) => {
@@ -45,8 +43,8 @@ async fn login_model() {
         }
     };
 
-    let mut machine = machine::Machine::new();
-    machine.seed(8739438725484);
+    let mut machine = machine::Machine::default();
+    machine.seed(1234);
     let res = machine.load_models(models);
     if res.is_err() {
         panic!(
@@ -68,18 +66,12 @@ async fn login_model() {
     assert_eq!(res.status(), 200, "Should return 200 OK.");
     assert_eq!(res.body(), "true", "Should return true.");
 
-    let expected = vec![
-        "e0", "n1", "e7", "n3", "e3", "n2", "e6", "n1", "e0", "n1", "e7", "n3", "e4", "n1", "e0",
-        "n1", "e7", "n3", "e4", "n1", "e7", "n3", "e3", "n2", "e6", "n1", "e7", "n3", "e4", "n1",
-        "e0", "n1", "e1", "n2", "e6", "n1", "e7", "n3", "e3", "n2", "e2", "n3", "e3", "n2", "e2",
-        "n3", "e4", "n1", "e1", "n2", "e6", "n1", "e0", "n1", "e0", "n1", "e7", "n3", "e4", "n1",
-        "e0", "n1", "e1", "n2", "e6", "n1", "e7", "n3", "e4", "n1", "e1", "n2", "e2", "n3", "e4",
-        "n1", "e0", "n1", "e1", "n2", "e6", "n1", "e1", "n2", "e2", "n3", "e3", "n2", "e8", "n2",
-        "e8", "n2", "e2", "n3", "e4", "n1", "e0", "n1", "e7", "n3", "e3", "n2", "e2", "n3", "e3",
-        "n2", "e8", "n2", "e5",
-    ];
+    let res =
+        fs::read_to_string(resource_path("results/login_1234.json").to_str().unwrap()).unwrap();
+    let expected: Vec<Value> = serde_json::from_str(res.as_str()).unwrap();
+    let mut actual: Vec<Value> = vec![];
 
-    for element in expected {
+    for _element in expected.clone() {
         let res = warp::test::request()
             .method("GET")
             .path("/hasNext")
@@ -95,13 +87,28 @@ async fn login_model() {
             .await;
         assert_eq!(res.status(), 200, "Should return 200 OK.");
 
-        let expected = Position {
-            model_id: "853429e2-0528-48b9-97b3-7725eafbb8b5".to_string(),
-            element_id: element.to_string(),
-        };
-        let body = std::str::from_utf8(res.body()).expect("Found invalid UTF-8");
-        assert_json_eq!(body, serde_json::to_string(&expected).unwrap());
+        //let body = serde_json::from_str(std::str::from_utf8(res.body()).unwrap()).unwrap();
+        let body = serde_json::from_str(std::str::from_utf8(res.body()).unwrap()).unwrap();
+        actual.push(body);
     }
+
+    for index in 0..expected.len() {
+        assert_json_eq!(
+            expected
+                .get(index)
+                .unwrap()
+                .to_string()
+                .parse::<serde_json::Value>()
+                .unwrap(),
+            actual
+                .get(index)
+                .unwrap()
+                .to_string()
+                .parse::<serde_json::Value>()
+                .unwrap()
+        );
+    }
+
     let res = warp::test::request()
         .method("GET")
         .path("/hasNext")
