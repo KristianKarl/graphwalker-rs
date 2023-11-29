@@ -3,7 +3,10 @@ use evalexpr::*;
 use graph::{Model, Models};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use serde_derive::{Deserialize, Serialize};
-use std::collections::{BTreeMap, VecDeque};
+use std::{
+    cmp::Ordering,
+    collections::{BTreeMap, VecDeque},
+};
 
 #[path = "stop_conditions/stop_condition.rs"]
 pub mod stop_condition;
@@ -31,6 +34,26 @@ pub struct Data {
     name: String,
     value: evalexpr::Value,
 }
+
+impl Ord for Data {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.name.cmp(&other.name)
+    }
+}
+
+impl PartialOrd for Data {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Data {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+impl Eq for Data {}
 
 impl Serialize for Data {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -177,6 +200,7 @@ impl Machine {
                     let data = Data { name: n, value: v };
                     step.data.push(data);
                 }
+                step.data.sort();
                 log::debug!("Data: {:?}", step);
             }
 
@@ -538,20 +562,23 @@ impl Machine {
             }
 
             match self.step() {
-                Ok(step) => match serde_json::to_string(&step) {
-                    Ok(step_json_str) => {
-                        println!("{}", step_json_str);
-                        if self.status == MachineStatus::Ended {
-                            log::debug!("The machine has ended");
-                            return Ok(());
+                Ok(mut step) => {
+                    step.data.sort();
+                    match serde_json::to_string(&step) {
+                        Ok(step_json_str) => {
+                            println!("{}", step_json_str);
+                            if self.status == MachineStatus::Ended {
+                                log::debug!("The machine has ended");
+                                return Ok(());
+                            }
+                        }
+                        Err(err) => {
+                            let msg = format!("Could extract the json str from step: {:?}", err);
+                            log::warn!("{}", msg);
+                            return Err(msg);
                         }
                     }
-                    Err(err) => {
-                        let msg = format!("Could extract the json str from step: {:?}", err);
-                        log::warn!("{}", msg);
-                        return Err(msg);
-                    }
-                },
+                }
                 Err(err) => {
                     self.status = MachineStatus::Failed;
                     log::debug!("The machine has failed");

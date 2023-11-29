@@ -92,22 +92,7 @@ async fn login_model() {
         actual.push(body);
     }
 
-    for index in 0..expected.len() {
-        assert_json_eq!(
-            expected
-                .get(index)
-                .unwrap()
-                .to_string()
-                .parse::<serde_json::Value>()
-                .unwrap(),
-            actual
-                .get(index)
-                .unwrap()
-                .to_string()
-                .parse::<serde_json::Value>()
-                .unwrap()
-        );
-    }
+    assert_json_eq!(expected, actual);
 
     let res = warp::test::request()
         .method("GET")

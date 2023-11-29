@@ -1,6 +1,5 @@
 use graph::{Model, Vertex, Models, Edge};
 use pretty_assertions::assert_eq;
-use serde_with::rust::unwrap_or_skip;
 
 fn create_model() -> Model {
     let mut model: Model = Model::default();

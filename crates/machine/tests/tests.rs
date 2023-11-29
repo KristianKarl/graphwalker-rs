@@ -145,22 +145,7 @@ fn machine() {
         .map(|step| serde_json::to_value(&step).unwrap())
         .collect();
 
-    for index in 0..expected.len() {
-        assert_json_eq!(
-            expected
-                .get(index)
-                .unwrap()
-                .to_string()
-                .parse::<serde_json::Value>()
-                .unwrap(),
-            actual
-                .get(index)
-                .unwrap()
-                .to_string()
-                .parse::<serde_json::Value>()
-                .unwrap()
-        );
-    }
+    assert_json_eq!(expected, actual);
 }
 
 #[test]
@@ -197,20 +182,5 @@ fn test_a_model() {
         .map(|step| serde_json::to_value(&step).unwrap())
         .collect();
 
-    for index in 0..expected.len() {
-        assert_json_eq!(
-            expected
-                .get(index)
-                .unwrap()
-                .to_string()
-                .parse::<serde_json::Value>()
-                .unwrap(),
-            actual
-                .get(index)
-                .unwrap()
-                .to_string()
-                .parse::<serde_json::Value>()
-                .unwrap()
-        );
-    }
+    assert_json_eq!(expected, actual);
 }
