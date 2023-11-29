@@ -36,6 +36,12 @@ fn main() {
                                         .arg(arg!(--seed <NUMBER>)
                                             .help("seeds the generator with NUMBER to get predictable outputs")
                                         )
+                                        // https://oss.issuehunt.io/r/clap-rs/clap/issues/3586
+                                        // Short flags should precede long flags
+                                        .arg(arg!(--"bypass-guards")
+                                            .help("when given, the guards in the model(s) will be by-passed")
+                                            .required(false)
+                                        )
                                     )
                           .subcommand(
                                 Command::new("online")
@@ -47,6 +53,12 @@ fn main() {
                                         .arg(arg!(--port <NUMBER>)
                                             .help("the port number of the REST service")
                                             .default_value("9090")
+                                        )
+                                        // https://oss.issuehunt.io/r/clap-rs/clap/issues/3586
+                                        // Short flags should precede long flags
+                                        .arg(arg!(--"bypass-guards")
+                                            .help("when given, the guards in the model(s) will be by-passed")
+                                            .required(false)
                                         )
                                     )
                           .get_matches();
@@ -159,6 +171,10 @@ fn main() {
                 };
             }
 
+            if offline_matches.contains_id("bypass-guards") {
+                machine.bypass_guards = true;
+            }
+
             match machine.walk() {
                 Ok(()) => std::process::exit(exitcode::OK),
                 Err(error) => {
@@ -168,9 +184,9 @@ fn main() {
             }
         }
 
-        Some(("online", offline_matches)) => {
+        Some(("online", online_matches)) => {
             let file_read_result = io::read(
-                offline_matches
+                online_matches
                     .get_one::<String>("INPUT")
                     .expect("required"),
             );
@@ -189,7 +205,11 @@ fn main() {
                 std::process::exit(exitcode::SOFTWARE);
             }
 
-            if let Some(number_str) = offline_matches.get_one::<String>("seed") {
+            if online_matches.contains_id("bypass-guards") {
+                machine.bypass_guards = true;
+            }
+
+            if let Some(number_str) = online_matches.get_one::<String>("seed") {
                 match number_str.parse::<u64>() {
                     Ok(number) => machine.seed(number),
                     Err(error) => {
