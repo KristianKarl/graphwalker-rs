@@ -1,9 +1,10 @@
 {
+  "startElementId": "n662",
   "models": [
     {
       "name": "SuperLarge",
       "id": "add57750-823c-470d-86ed-ca0fe468c7fc",
-      "generator": "quick_random(edge_coverage(100))",
+      "generator": "random(edge_coverage(100))",
       "startElementId": "n662",
       "vertices": [
         {
