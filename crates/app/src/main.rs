@@ -38,8 +38,8 @@ fn main() {
                                         )
                                         // https://oss.issuehunt.io/r/clap-rs/clap/issues/3586
                                         // Short flags should precede long flags
-                                        .arg(arg!(--"bypass-guards")
-                                            .help("when given, the guards in the model(s) will be by-passed")
+                                        .arg(arg!(--"ignore-guards")
+                                            .help("when given, the guards in the model(s) will be ignored")
                                             .required(false)
                                         )
                                     )
@@ -56,8 +56,8 @@ fn main() {
                                         )
                                         // https://oss.issuehunt.io/r/clap-rs/clap/issues/3586
                                         // Short flags should precede long flags
-                                        .arg(arg!(--"bypass-guards")
-                                            .help("when given, the guards in the model(s) will be by-passed")
+                                        .arg(arg!(--"ignore-guards")
+                                            .help("when given, the guards in the model(s) will be ignored")
                                             .required(false)
                                         )
                                     )
@@ -171,8 +171,8 @@ fn main() {
                 };
             }
 
-            if offline_matches.contains_id("bypass-guards") {
-                machine.bypass_guards = true;
+            if offline_matches.contains_id("ignore-guards") {
+                machine.ignore_guards = true;
             }
 
             match machine.walk() {
@@ -205,8 +205,8 @@ fn main() {
                 std::process::exit(exitcode::SOFTWARE);
             }
 
-            if online_matches.contains_id("bypass-guards") {
-                machine.bypass_guards = true;
+            if online_matches.contains_id("ignore-guards") {
+                machine.ignore_guards = true;
             }
 
             if let Some(number_str) = online_matches.get_one::<String>("seed") {

@@ -165,7 +165,7 @@ pub struct Machine {
     pub status: MachineStatus,
     unvisited_edges: Vec<Position>,
     shared_states: Vec<SharedState>,
-    pub bypass_guards: bool,
+    pub ignore_guards: bool,
 }
 
 impl Machine {
@@ -473,7 +473,7 @@ impl Machine {
     }
 
     fn is_selectable(&self, eval_context: &mut HashMapContext, guard: Option<String>) -> bool {
-        if self.bypass_guards {
+        if self.ignore_guards {
             return true;
         }
         if let Some(guard) = guard.clone() {

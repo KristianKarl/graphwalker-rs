@@ -1,7 +1,7 @@
 use std::fs;
 
 use assert_json_diff::assert_json_eq;
-use machine::{Machine, MachineStatus};
+use machine::{Machine, MachineStatus, Position};
 use pretty_assertions::assert_eq;
 use serde_json::Value;
 
@@ -13,6 +13,76 @@ fn resource_path(resource: &str) -> std::path::PathBuf {
     path.push("resources");
     path.push(resource);
     path
+}
+
+#[derive(Debug)]
+pub struct TestData {
+    model_file: String,
+    expected_file: String,
+    seed: u64,
+    ignore_guards: bool,
+    number_of_models: usize,
+    start_pos: Position,
+}
+
+fn get_test_data() -> Vec<TestData> {
+    vec![
+        TestData {
+            model_file: "models/login.json".to_string(),
+            expected_file: "results/login_ignore_guards_870151202047466989.json".to_string(),
+            seed: 870151202047466989,
+            ignore_guards: true,
+            number_of_models: 1,
+            start_pos: Position {
+                model_id: "".to_string(),
+                element_id: "n1".to_string(),
+            },
+        },
+        TestData {
+            model_file: "models/simpleSingleModel.json".to_string(),
+            expected_file: "results/simpleSingleModel_1234.json".to_string(),
+            seed: 1234,
+            ignore_guards: false,
+            number_of_models: 1,
+            start_pos: Position {
+                model_id: "".to_string(),
+                element_id: "v1".to_string(),
+            },
+        },
+        TestData {
+            model_file: "models/simpleMultiModel.json".to_string(),
+            expected_file: "results/simpleMultiModel_1234.json".to_string(),
+            seed: 1234,
+            ignore_guards: false,
+            number_of_models: 2,
+            start_pos: Position {
+                model_id: "".to_string(),
+                element_id: "v11".to_string(),
+            },
+        },
+        TestData {
+            model_file: "models/login.json".to_string(),
+            expected_file: "results/login_1234.json".to_string(),
+            seed: 1234,
+            ignore_guards: false,
+            number_of_models: 1,
+            start_pos: Position {
+                model_id: "".to_string(),
+                element_id: "n1".to_string(),
+            },
+        },
+        TestData {
+            model_file: "models/petclinic.json".to_string(),
+            expected_file: "results/petclinic_1234.json".to_string(),
+            seed: 1234,
+            ignore_guards: false,
+            number_of_models: 5,
+            start_pos: Position {
+                model_id: "".to_string(),
+                element_id: "32ea3d10-789a-11ea-8c87-010078a2bc20".to_string(),
+            },
+        },
+    ]
 }
 
 #[test]
@@ -30,157 +100,42 @@ fn test_seed() {
 }
 
 #[test]
-fn walk_multiple_model() {
-    let mut machine = Machine::default();
-    machine.seed(1234);
-    let res = machine.load_models(
-        io::json_read::read(
-            resource_path("models/simpleMultiModel.json")
-                .to_str()
-                .unwrap(),
-        )
-        .unwrap(),
-    );
-    assert_eq!(res.is_ok(), true);
+fn verify_all_test_models() {
+    for data in get_test_data() {
+        dbg!(&data);
+        let mut machine = Machine::default();
+        machine.seed(data.seed);
+        assert!(machine
+            .load_models(
+                io::json_read::read(resource_path(data.model_file.as_str()).to_str().unwrap())
+                    .unwrap()
+            )
+            .is_ok());
 
-    let res = machine.walk();
-    assert_eq!(
-        res.is_ok(),
-        true,
-        "{:?}",
-        Err::<(), Result<(), String>>(res)
-    );
+        assert_eq!(machine.contexts.len(), data.number_of_models);
+        assert_eq!(machine.status, MachineStatus::NotStarted);
+        assert_eq!(machine.clone().start_pos, data.start_pos);
 
-    let res = fs::read_to_string(
-        resource_path("results/simpleMultiModel_1234.json")
-            .to_str()
-            .unwrap(),
-    )
-    .unwrap();
-    let expected: Vec<Value> = serde_json::from_str(res.as_str()).unwrap();
+        machine.ignore_guards = data.ignore_guards;
+        let res = machine.walk();
+        assert_eq!(
+            res.is_ok(),
+            true,
+            "{:?}",
+            Err::<(), Result<(), String>>(res)
+        );
 
-    let actual: Vec<Value> = machine
-        .profile
-        .steps
-        .iter()
-        .map(|step| serde_json::to_value(&step).unwrap())
-        .collect();
+        let res = fs::read_to_string(resource_path(data.expected_file.as_str()).to_str().unwrap())
+            .unwrap();
+        let expected: Vec<Value> = serde_json::from_str(res.as_str()).unwrap();
 
-    assert_json_eq!(expected, actual);
-}
+        let actual: Vec<Value> = machine
+            .profile
+            .steps
+            .iter()
+            .map(|step| serde_json::to_value(&step).unwrap())
+            .collect();
 
-#[test]
-fn walk_single_model() {
-    let mut machine = Machine::default();
-    machine.seed(1234);
-    let res = machine.load_models(
-        io::json_read::read(
-            resource_path("models/simpleSingleModel.json")
-                .to_str()
-                .unwrap(),
-        )
-        .unwrap(),
-    );
-    assert_eq!(res.is_ok(), true);
-
-    let res = machine.walk();
-    assert_eq!(
-        res.is_ok(),
-        true,
-        "{:?}",
-        Err::<(), Result<(), String>>(res)
-    );
-
-    let res = fs::read_to_string(
-        resource_path("results/simpleSingleModel_1234.json")
-            .to_str()
-            .unwrap(),
-    )
-    .unwrap();
-    let expected: Vec<Value> = serde_json::from_str(res.as_str()).unwrap();
-
-    let actual: Vec<Value> = machine
-        .profile
-        .steps
-        .iter()
-        .map(|step| serde_json::to_value(&step).unwrap())
-        .collect();
-
-    assert_json_eq!(expected, actual);
-}
-
-#[test]
-fn machine() {
-    let mut machine = Machine::default();
-    machine.seed(1234);
-    assert!(machine
-        .load_models(
-            io::json_read::read(resource_path("models/login.json").to_str().unwrap()).unwrap()
-        )
-        .is_ok());
-
-    assert_eq!(machine.contexts.len(), 1);
-
-    assert_eq!(machine.status, MachineStatus::NotStarted);
-
-    let res = machine.walk();
-    assert_eq!(
-        res.is_ok(),
-        true,
-        "{:?}",
-        Err::<(), Result<(), String>>(res)
-    );
-
-    let start_pos = machine.clone().start_pos;
-    assert_eq!(start_pos.model_id, "login".to_string());
-
-    let res =
-        fs::read_to_string(resource_path("results/login_1234.json").to_str().unwrap()).unwrap();
-    let expected: Vec<Value> = serde_json::from_str(res.as_str()).unwrap();
-
-    let actual: Vec<Value> = machine
-        .profile
-        .steps
-        .iter()
-        .map(|step| serde_json::to_value(&step).unwrap())
-        .collect();
-
-    assert_json_eq!(expected, actual);
-}
-
-#[test]
-fn test_a_model() {
-    let mut machine = Machine::default();
-    machine.seed(1234);
-    assert!(machine
-        .load_models(
-            io::json_read::read(resource_path("models/petclinic.json").to_str().unwrap()).unwrap()
-        )
-        .is_ok());
-
-    let res = machine.walk();
-
-    assert_eq!(
-        res.is_ok(),
-        true,
-        "{:?}",
-        Err::<(), Result<(), String>>(res)
-    );
-
-    let res = fs::read_to_string(
-        resource_path("results/petclinic_1234.json")
-            .to_str()
-            .unwrap(),
-    )
-    .unwrap();
-    let expected: Vec<Value> = serde_json::from_str(res.as_str()).unwrap();
-
-    let actual: Vec<Value> = machine
-        .profile
-        .steps
-        .iter()
-        .map(|step| serde_json::to_value(&step).unwrap())
-        .collect();
-
-    assert_json_eq!(expected, actual);
+        assert_json_eq!(expected, actual);
+    }
 }
