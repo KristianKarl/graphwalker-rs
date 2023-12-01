@@ -5,6 +5,8 @@
 ```bash
 cargo install flamegraph
 
+echo -1 | sudo tee /proc/sys/kernel/perf_event_paranoid
+
 # Run 10 seconds; stop by ctrl+c
 export CARGO_PROFILE_RELEASE_DEBUG=true; cargo flamegraph --bin graphwalker -- offline resources/models/SuperLarge.json
 cp flamegraph.svg > doc/profiling/flamegraph_$(git rev-parse --short HEAD).svg

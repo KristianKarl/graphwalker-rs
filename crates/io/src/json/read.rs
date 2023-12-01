@@ -1,8 +1,8 @@
 use graph::Models;
 use log::debug;
-use std::fs;
+use std::{fs, sync::Arc};
 
-pub fn read(input_file: &str) -> Result<Models, String> {
+pub fn read(input_file: &str) -> Result<Arc<Models>, String> {
     debug!("{}", input_file);
     let res = fs::read_to_string(input_file);
     match res {

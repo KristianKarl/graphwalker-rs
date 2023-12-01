@@ -57,7 +57,7 @@ fn test_read_valid_models() {
         assert_eq!(models.models.len(), data.num_of_models);
 
         let m = models.models.get(&data.model_id).unwrap();
-        assert_eq!(m.vertices.len(), data.num_of_vertices);
-        assert_eq!(m.edges.len(), data.num_of_edges);
+        assert_eq!(m.vertices.read().unwrap().len(), data.num_of_vertices);
+        assert_eq!(m.edges.read().unwrap().len(), data.num_of_edges);
     }
 }

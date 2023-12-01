@@ -6,6 +6,7 @@ use serde_derive::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, VecDeque},
+    sync::Arc,
 };
 
 #[path = "stop_conditions/stop_condition.rs"]
@@ -102,7 +103,7 @@ impl Profile {
 #[derive(Default, Clone, Debug)]
 pub struct Context {
     id: String,
-    model: Model,
+    model: Arc<Model>,
     fullfillment: f32,
     visited_elements: BTreeMap<String, u32>,
     eval_context: evalexpr::HashMapContext,
@@ -189,8 +190,8 @@ impl Machine {
         };
 
         if let Some(ctx) = self.contexts.get_mut(&step.position.model_id) {
-            if let Some(name) = ctx.model.name.clone() {
-                step.model_name = name;
+            if let Some(name) = &ctx.model.name {
+                step.model_name = name.to_string();
             }
             if let Some(name) = ctx.model.get_name_for_id(&position.element_id) {
                 step.element_name = name;
@@ -236,7 +237,7 @@ impl Machine {
         for ctx in self.contexts.values_mut() {
             ctx.eval_context = HashMapContext::default();
 
-            for action in ctx.model.actions.clone() {
+            for action in &ctx.model.actions {
                 log::debug!("Will run model action: {:?}", action);
 
                 match eval_with_context_mut(action.as_str(), &mut ctx.eval_context) {
@@ -264,7 +265,7 @@ impl Machine {
 
         // Find the model in which the start element id exists
         for (key, ctx) in &self.contexts {
-            if ctx.model.has_id(self.start_pos.element_id.clone()) {
+            if ctx.model.has_id(&self.start_pos.element_id) {
                 self.start_pos.model_id = key.to_string();
             }
         }
@@ -285,11 +286,11 @@ impl Machine {
             let mut visited_elements = BTreeMap::new();
             let mut unvisited_edges = Vec::new();
 
-            for k in ctx.model.edges.keys() {
+            for k in ctx.model.edges.read().unwrap().keys() {
                 visited_elements.insert(k.to_string(), 0);
                 unvisited_edges.push(Position::new(key.to_string(), k.to_string()));
             }
-            for k in ctx.model.vertices.keys() {
+            for k in ctx.model.vertices.read().unwrap().keys() {
                 visited_elements.insert(k.to_string(), 0);
             }
             ctx.visited_elements = visited_elements;
@@ -306,18 +307,18 @@ impl Machine {
         Ok(())
     }
 
-    pub fn load_models(&mut self, models: Models) -> Result<(), String> {
+    pub fn load_models(&mut self, models: Arc<Models>) -> Result<(), String> {
         log::debug!("Loading {} models", models.models.len());
-        if let Some(pos) = models.start_element_id {
-            self.start_pos.element_id = pos;
+        if let Some(pos) = &models.start_element_id {
+            self.start_pos.element_id = pos.to_string();
         } else {
             let msg = "The Models data did not have a start_element_id. Start id is mandatory.";
             log::error!("{}", msg);
             return Err(msg.to_string());
         }
 
-        for (key, model) in models.models {
-            if self.contexts.contains_key(&key) {
+        for (key, model) in &*models.models {
+            if self.contexts.contains_key(key) {
                 let msg = format!("Model id: {} is not uniqe. This was unexpected.", &key);
                 log::error!("{}", msg);
                 return Err(msg);
@@ -325,7 +326,7 @@ impl Machine {
 
             let context = Context {
                 id: key.clone(),
-                model: model.clone(),
+                model: Arc::new(model.clone()),
                 fullfillment: 1f32,
                 ..Default::default()
             };
@@ -333,7 +334,7 @@ impl Machine {
             self.contexts.insert(key.clone(), context);
 
             // Populate list of shared states.
-            for (k, v) in &model.vertices {
+            for (k, v) in &*model.vertices.read().unwrap() {
                 if let Some(name) = &v.shared_state {
                     let c = self
                         .shared_states
@@ -387,11 +388,10 @@ impl Machine {
         if let Some(ctx) = self.contexts.get_mut(&current_pos.model_id) {
             let model = &ctx.model;
             // Check that the element does exist in the model
-            if !model.has_id(current_pos.clone().element_id) {
+            if !model.has_id(&current_pos.element_id) {
                 let msg = format!(
                     "Element {} was not found in model: {}",
-                    current_pos.clone().element_id,
-                    current_pos.clone().model_id,
+                    current_pos.element_id, current_pos.model_id,
                 );
                 log::error!("{}", msg);
                 return Err(msg);
@@ -399,7 +399,7 @@ impl Machine {
 
             // If the current position represents an edge the next element should be a Vertex.
             // That vertex is extracted from the edge target vertex.
-            if let Some(edge) = model.edges.clone().get(&current_pos.clone().element_id) {
+            if let Some(edge) = model.edges.read().unwrap().get(&current_pos.element_id) {
                 self.current_pos.element_id = edge.target_vertex_id.clone();
                 return Ok(step);
             }
@@ -421,13 +421,19 @@ impl Machine {
     }
 
     fn get_next_edge(&self, ctx: &mut Context) -> Result<Position, String> {
-        if let Some(vertex) = ctx.model.vertices.get(&self.current_pos.element_id) {
+        if let Some(vertex) = ctx
+            .model
+            .vertices
+            .read()
+            .unwrap()
+            .get(&self.current_pos.element_id)
+        {
             // Build a list of candidates of edges to select
             // Look for shared_states
             let mut candidates: Vec<Position> = Vec::new();
-            if let Some(name) = vertex.shared_state.clone() {
-                for shared_state in self.shared_states.clone() {
-                    if shared_state.name == name {
+            if let Some(name) = &vertex.shared_state {
+                for shared_state in &self.shared_states {
+                    if shared_state.name.cmp(name) == Ordering::Equal {
                         candidates.clone_from(&shared_state.positions);
                         break;
                     }
@@ -441,14 +447,22 @@ impl Machine {
                 candidates.remove(index);
             }
 
-            for e in ctx.model.out_edges(self.current_pos.element_id.clone()) {
+            for e in ctx.model.out_edges(&self.current_pos.element_id) {
                 let pos = Position {
                     model_id: self.current_pos.model_id.clone(),
                     element_id: e.id.clone(),
                 };
-                if self.is_selectable(&mut ctx.eval_context, e.guard) {
-                    log::trace!("Adding {:?} to the candidates list", pos);
-                    candidates.push(pos);
+                match &e.guard {
+                    Some(guard) => {
+                        if self.is_selectable(&mut ctx.eval_context, guard) {
+                            log::trace!("Adding {:?} to the candidates list", pos);
+                            candidates.push(pos);
+                        }
+                    }
+                    None => {
+                        log::trace!("Adding {:?} to the candidates list", pos);
+                        candidates.push(pos);
+                    }
                 }
             }
 
@@ -472,35 +486,29 @@ impl Machine {
         Err(msg)
     }
 
-    fn is_selectable(&self, eval_context: &mut HashMapContext, guard: Option<String>) -> bool {
+    fn is_selectable(&self, eval_context: &mut HashMapContext, guard: &str) -> bool {
         if self.ignore_guards {
             return true;
         }
-        if let Some(guard) = guard.clone() {
-            log::debug!("Edge has guard: {:?}", guard);
 
-            match eval_with_context_mut(&guard, eval_context) {
-                Ok(value) => match value.as_boolean() {
-                    Ok(res) => {
-                        log::debug!("The guard evaluated to: {:?}", res);
-                        return res;
-                    }
-                    Err(err) => {
-                        let msg =
-                            format!("Evaluating guard {:?}, failed with error: {:?}", guard, err);
-                        log::error!("{}", msg);
-                        return true;
-                    }
-                },
+        match eval_with_context_mut(guard, eval_context) {
+            Ok(value) => match value.as_boolean() {
+                Ok(res) => {
+                    log::debug!("The guard evaluated to: {:?}", res);
+                    res
+                }
                 Err(err) => {
                     let msg = format!("Evaluating guard {:?}, failed with error: {:?}", guard, err);
                     log::error!("{}", msg);
-                    return true;
+                    true
                 }
+            },
+            Err(err) => {
+                let msg = format!("Evaluating guard {:?}, failed with error: {:?}", guard, err);
+                log::error!("{}", msg);
+                true
             }
         }
-        log::trace!("No guard");
-        true
     }
 
     /*
@@ -509,10 +517,10 @@ impl Machine {
      */
     fn get_actions(&self, pos: &Position) -> (String, Vec<String>) {
         for (k, ctx) in &self.contexts {
-            if let Some(edge) = ctx.model.edges.get(&pos.element_id) {
+            if let Some(edge) = ctx.model.edges.read().unwrap().get(&pos.element_id) {
                 return (k.clone(), edge.actions.clone());
             }
-            if let Some(vertex) = ctx.model.vertices.get(&pos.element_id) {
+            if let Some(vertex) = ctx.model.vertices.read().unwrap().get(&pos.element_id) {
                 return (k.clone(), vertex.actions.clone());
             }
         }

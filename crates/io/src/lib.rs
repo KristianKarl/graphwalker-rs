@@ -2,6 +2,7 @@ use graph::Models;
 use log::{debug, trace};
 use std::ffi::OsStr;
 use std::path::Path;
+use std::sync::Arc;
 
 #[path = "dot/read.rs"]
 pub mod dot_read;
@@ -18,7 +19,7 @@ fn get_extension_from_filename(file_name: &str) -> Option<&str> {
     Path::new(file_name).extension().and_then(OsStr::to_str)
 }
 
-pub fn read(input_file: &str) -> Result<Models, String> {
+pub fn read(input_file: &str) -> Result<Arc<Models>, String> {
     debug!("{}", input_file);
 
     if std::path::Path::new(input_file).exists() {

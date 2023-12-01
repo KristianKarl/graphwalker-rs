@@ -1,63 +1,77 @@
-use graph::{Model, Vertex, Models, Edge};
+use std::sync::Arc;
+
+use graph::{Edge, Model, Models, Vertex};
 use pretty_assertions::assert_eq;
 
 fn create_model() -> Model {
-    let mut model: Model = Model::default();
-    model
-        .vertices
-        .insert("a".to_string(), Vertex::default().id("a"));
-    model
-        .vertices
-        .insert("b".to_string(), Vertex::default().id("b"));
-    model
-        .vertices
-        .insert("c".to_string(), Vertex::default().id("c"));
-    model
-        .edges
-        .insert("a->b".to_string(), Edge::default().id("a->b", "a", "a"));
-    model
-        .edges
-        .insert("b->c".to_string(), Edge::default().id("b->c", "b", "c"));
+    let model: Model = Model::default();
+    let vertices = Arc::clone(&model.vertices);
+    let edges = Arc::clone(&model.edges);
+
+    vertices
+        .write()
+        .unwrap()
+        .insert("a".to_string(), Arc::new(Vertex::default().id("a")));
+    vertices
+        .write()
+        .unwrap()
+        .insert("b".to_string(), Arc::new(Vertex::default().id("b")));
+    vertices
+        .write()
+        .unwrap()
+        .insert("c".to_string(), Arc::new(Vertex::default().id("c")));
+    edges.write().unwrap().insert(
+        "a->b".to_string(),
+        Arc::new(Edge::default().id("a->b", "a", "a")),
+    );
+    edges.write().unwrap().insert(
+        "b->c".to_string(),
+        Arc::new(Edge::default().id("b->c", "b", "c")),
+    );
     model
 }
 
 #[test]
 fn build_model_test() {
     let model = create_model();
-    assert_eq!(model.vertices.len(), 3);
-    assert_eq!(model.edges.len(), 2);
+    assert_eq!(model.vertices.read().unwrap().len(), 3);
+    assert_eq!(model.edges.read().unwrap().len(), 2);
 }
 
 #[test]
 fn get_vertex_test() {
     let model = create_model();
-    let v = model.vertices.get("a").unwrap();
-    assert_eq!(v.id, "a");
+    let binding = model.vertices.read().unwrap();
+    let v = binding.get("a");
+    assert_eq!(v.unwrap().id, "a");
 
-    let v = model.vertices.get("x");
+    let binding = model.vertices.read().unwrap();
+    let v = binding.get("x");
     assert!(v.is_none());
 }
 
 #[test]
 fn get_edge_test() {
     let model = create_model();
-    let a = model.edges.get("b->c").unwrap();
-    assert_eq!(a.id, "b->c");
+    let binding = model.edges.read().unwrap();
+    let a = binding.get("b->c");
+    assert_eq!(a.unwrap().id, "b->c");
 
-    let b = model.edges.get("x");
+    let binding = model.edges.read().unwrap();
+    let b = binding.get("x");
     assert!(b.is_none());
 }
 
 #[test]
 fn has_id_test() {
     let model = create_model();
-    assert!(model.has_id("a".to_string()));
-    assert!(model.has_id("c".to_string()));
-    assert!(model.has_id("b->c".to_string()));
+    assert!(model.has_id("a"));
+    assert!(model.has_id("c"));
+    assert!(model.has_id("b->c"));
 
     // Negative tests
-    assert!(!model.has_id(String::new()));
-    assert!(!model.has_id("x".to_string()));
+    assert!(!model.has_id(""));
+    assert!(!model.has_id("x"));
 }
 
 #[test]
@@ -262,7 +276,6 @@ fn deserialize_login_model() {
           }"#;
     let models: Models = serde_json::from_str(models_json_str).unwrap();
     let models_json_str_serialized = serde_json::to_string_pretty(&models).unwrap();
-    let deserialized_models: Models =
-        serde_json::from_str(&models_json_str_serialized).unwrap();
+    let deserialized_models: Models = serde_json::from_str(&models_json_str_serialized).unwrap();
     assert_eq!(models, deserialized_models);
 }

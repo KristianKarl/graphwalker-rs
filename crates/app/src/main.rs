@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate log;
 
+use std::sync::Arc;
+
 use clap::{arg, Command};
 use env_logger::{Builder, Target};
 use log::LevelFilter;
@@ -120,7 +122,7 @@ fn main() {
             if let Some(format) = convert_matches.get_one::<String>("format") {
                 match format.as_str() {
                     "json" => {
-                        let res = io::json_write::write(models);
+                        let res = io::json_write::write(Arc::clone(&models));
                         match res {
                             Ok(_) => {}
                             Err(why) => {
@@ -130,7 +132,7 @@ fn main() {
                         }
                     }
                     "dot" => {
-                        io::dot_write::write(models);
+                        io::dot_write::write(Arc::clone(&models));
                     }
                     _ => {
                         error!("Output format for file is not yet implemented.");
@@ -155,7 +157,7 @@ fn main() {
             };
 
             let mut machine = machine::Machine::default();
-            let res = machine.load_models(models);
+            let res = machine.load_models(Arc::clone(&models));
             if res.is_err() {
                 error!("{:?}", res.err());
                 std::process::exit(exitcode::SOFTWARE);
@@ -184,6 +186,7 @@ fn main() {
             }
         }
 
+        #[cfg(feature = "online")]
         Some(("online", online_matches)) => {
             let file_read_result = io::read(
                 online_matches

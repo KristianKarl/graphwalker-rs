@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use graph::Models;
 
-pub fn write(models: Models) -> Result<(), String> {
+pub fn write(models: Arc<Models>) -> Result<(), String> {
     let res = serde_json::to_string_pretty(&models);
     match res {
         Ok(json_str) => {

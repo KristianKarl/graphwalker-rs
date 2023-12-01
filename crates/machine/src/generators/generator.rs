@@ -1,4 +1,4 @@
-use std::{rc::Rc, cell::RefCell};
+use std::{cell::RefCell, rc::Rc};
 
 use evalexpr::eval_with_context_mut;
 use graph::Edge;
@@ -38,7 +38,7 @@ impl<'a> core::fmt::Debug for dyn Generator + 'a {
 #[derive(Debug, Default)]
 pub struct RandomGenerator {
     stop_conditions: Vec<Rc<dyn StopCondition>>,
-    context: Rc::<RefCell::<Context>>,
+    context: Rc<RefCell<Context>>,
 }
 
 impl Generator for RandomGenerator {
@@ -52,7 +52,13 @@ impl Generator for RandomGenerator {
         current_pos: Position,
     ) -> Result<Position, String> {
         let c = self.context.borrow_mut();
-        if let Some(vertex) = c.model.vertices.get(&current_pos.element_id) {
+        if let Some(vertex) = c
+            .model
+            .vertices
+            .read()
+            .unwrap()
+            .get(&current_pos.element_id)
+        {
             // Build a list of candidates of edges to select
             // Look for shared_states
             let mut candidates: Vec<Position> = Vec::new();
@@ -72,7 +78,7 @@ impl Generator for RandomGenerator {
                 candidates.remove(index);
             }
 
-            for e in c.model.out_edges(current_pos.element_id.clone()) {
+            for e in c.model.out_edges(&current_pos.element_id) {
                 let pos = Position {
                     model_id: current_pos.model_id.clone(),
                     element_id: e.id.clone(),

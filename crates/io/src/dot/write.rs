@@ -1,14 +1,16 @@
+use std::sync::Arc;
+
 use graph::Models;
 
-pub fn write(models: Models) {
-    for i in models.models {
+pub fn write(models: Arc<Models>) {
+    for i in &*models.models {
         let model = i.1;
         println!(
             "digraph {} {{",
             model.name.clone().expect("Expected a model name")
         );
 
-        for n in &model.vertices {
+        for n in &*model.vertices.read().unwrap() {
             let v = n.1;
             println!(
                 "  {} [label=\"{}\\nid: {}\"]",
@@ -20,17 +22,21 @@ pub fn write(models: Models) {
 
         println!();
 
-        for j in &model.edges {
+        for j in &*model.edges.read().unwrap() {
             let edge = j.1;
             print!(
                 "  {} -> {} [label=\"{}\\nid: {}",
                 &model
                     .vertices
+                    .read()
+                    .unwrap()
                     .get(&edge.source_vertex_id)
                     .expect("Source vertex")
                     .id,
                 &model
                     .vertices
+                    .read()
+                    .unwrap()
                     .get(&edge.target_vertex_id)
                     .expect("Target vertex")
                     .id,
