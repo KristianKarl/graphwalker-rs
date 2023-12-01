@@ -175,10 +175,10 @@ impl Machine {
         true
     }
 
-    fn log_step(&mut self, position: &Position) -> Result<Step, String> {
-        log::debug!("Position: {:?}", position);
+    fn log_step(&mut self) -> Result<Step, String> {
+        log::debug!("Position: {:?}", self.current_pos);
         let mut step = Step {
-            position: position.clone(),
+            position: self.current_pos.clone(),
             ..Default::default()
         };
 
@@ -186,7 +186,7 @@ impl Machine {
             if let Some(name) = &ctx.model.name {
                 step.model_name = name.to_string();
             }
-            if let Some(name) = ctx.model.get_name_for_id(&position.element_id) {
+            if let Some(name) = ctx.model.get_name_for_id(&step.position.element_id) {
                 step.element_name = name;
             }
 
@@ -366,25 +366,23 @@ impl Machine {
     }
 
     pub fn step(&mut self) -> Result<Step, String> {
-        let current_pos = self.current_pos.clone();
-
-        let step = match self.log_step(&current_pos) {
+        let step = match self.log_step() {
             Ok(s) => s,
             Err(err) => return Err(err),
         };
 
-        match self.run_action(&current_pos) {
+        match self.run_action() {
             Ok(_) => {}
             Err(err) => return Err(err),
         };
 
-        if let Some(ctx) = self.contexts.get_mut(&*current_pos.model_id) {
+        if let Some(ctx) = self.contexts.get_mut(&*self.current_pos.model_id) {
             let model = &ctx.model;
-            // Check that the element does exist in the model
-            if !model.has_id(&current_pos.element_id) {
+            // Check existence of element in model
+            if !model.has_id(&self.current_pos.element_id) {
                 let msg = format!(
                     "Element {} was not found in model: {}",
-                    current_pos.element_id, current_pos.model_id,
+                    self.current_pos.element_id, self.current_pos.model_id,
                 );
                 log::error!("{}", msg);
                 return Err(msg);
@@ -392,7 +390,7 @@ impl Machine {
 
             // If the current position represents an edge the next element should be a Vertex.
             // That vertex is extracted from the edge target vertex.
-            if let Some(edge) = model.edges.read().unwrap().get(&*current_pos.element_id) {
+            if let Some(edge) = model.edges.read().unwrap().get(&*self.current_pos.element_id) {
                 self.current_pos.element_id = Arc::new(edge.target_vertex_id.to_string());
                 return Ok(step);
             }
@@ -400,7 +398,7 @@ impl Machine {
 
         // If we have not found a step yet, the next step must be a an edge.
         // First use the current generator strategy.
-        if let Some(mut ctx) = self.contexts.get_mut(&*current_pos.model_id).cloned() {
+        if let Some(mut ctx) = self.contexts.get_mut(&*self.current_pos.model_id).cloned() {
             match self.get_next_edge(&mut ctx) {
                 Ok(pos) => self.current_pos = pos,
                 Err(err) => {
@@ -508,20 +506,20 @@ impl Machine {
      * Return the id of the context and a list of actions matching the position
      * of the element.
      */
-    fn get_actions(&self, pos: &Position) -> (String, Vec<String>) {
+    fn get_actions(&self) -> (String, Vec<String>) {
         for (k, ctx) in &self.contexts {
-            if let Some(edge) = ctx.model.edges.read().unwrap().get(&*pos.element_id) {
+            if let Some(edge) = ctx.model.edges.read().unwrap().get(&*self.current_pos.element_id) {
                 return (k.clone(), edge.actions.clone());
             }
-            if let Some(vertex) = ctx.model.vertices.read().unwrap().get(&*pos.element_id) {
+            if let Some(vertex) = ctx.model.vertices.read().unwrap().get(&*self.current_pos.element_id) {
                 return (k.clone(), vertex.actions.clone());
             }
         }
         ("".to_string(), Vec::default())
     }
 
-    fn run_action(&mut self, pos: &Position) -> Result<(), String> {
-        let (ctx_id, actions) = self.get_actions(pos);
+    fn run_action(&mut self) -> Result<(), String> {
+        let (ctx_id, actions) = self.get_actions();
 
         if ctx_id.is_empty() || actions.is_empty() {
             return Ok(());
