@@ -177,7 +177,7 @@ impl Model {
         None
     }
 
-    pub fn out_edges(&self, id: &String) -> Vec<Arc<Edge>> {
+    pub fn out_edges(&self, id: &str) -> Vec<Arc<Edge>> {
         let mut out_edges: Vec<Arc<Edge>> = Vec::new();
         for edge in self.edges.read().unwrap().values() {
             if edge.source_vertex_id == *id {
