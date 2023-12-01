@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, sync::Arc};
 
 use assert_json_diff::assert_json_eq;
 use machine::{Machine, MachineStatus, Position};
@@ -34,8 +34,8 @@ fn get_test_data() -> Vec<TestData> {
             ignore_guards: true,
             number_of_models: 1,
             start_pos: Position {
-                model_id: "".to_string(),
-                element_id: "n1".to_string(),
+                model_id: Arc::new("".to_string()),
+                element_id: Arc::new("n1".to_string()),
             },
         },
         TestData {
@@ -45,8 +45,8 @@ fn get_test_data() -> Vec<TestData> {
             ignore_guards: false,
             number_of_models: 1,
             start_pos: Position {
-                model_id: "".to_string(),
-                element_id: "v1".to_string(),
+                model_id: Arc::new("".to_string()),
+                element_id: Arc::new("v1".to_string()),
             },
         },
         TestData {
@@ -56,8 +56,8 @@ fn get_test_data() -> Vec<TestData> {
             ignore_guards: false,
             number_of_models: 2,
             start_pos: Position {
-                model_id: "".to_string(),
-                element_id: "v11".to_string(),
+                model_id: Arc::new("".to_string()),
+                element_id: Arc::new("v11".to_string()),
             },
         },
         TestData {
@@ -67,8 +67,8 @@ fn get_test_data() -> Vec<TestData> {
             ignore_guards: false,
             number_of_models: 1,
             start_pos: Position {
-                model_id: "".to_string(),
-                element_id: "n1".to_string(),
+                model_id: Arc::new("".to_string()),
+                element_id: Arc::new("n1".to_string()),
             },
         },
         TestData {
@@ -78,8 +78,8 @@ fn get_test_data() -> Vec<TestData> {
             ignore_guards: false,
             number_of_models: 5,
             start_pos: Position {
-                model_id: "".to_string(),
-                element_id: "32ea3d10-789a-11ea-8c87-010078a2bc20".to_string(),
+                model_id: Arc::new("".to_string()),
+                element_id: Arc::new("32ea3d10-789a-11ea-8c87-010078a2bc20".to_string()),
             },
         },
     ]

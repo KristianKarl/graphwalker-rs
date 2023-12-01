@@ -1,5 +1,4 @@
 use evalexpr::*;
-//use generator::Generator;
 use graph::{Model, Models};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use serde_derive::{Deserialize, Serialize};
@@ -9,20 +8,15 @@ use std::{
     sync::Arc,
 };
 
-#[path = "stop_conditions/stop_condition.rs"]
-pub mod stop_condition;
-
-#[path = "generators/generator.rs"]
-pub mod generator;
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, Ord, Eq, PartialEq, PartialOrd)]
 pub struct Position {
-    pub model_id: String,
-    pub element_id: String,
+    pub model_id: Arc<String>,
+    pub element_id: Arc<String>,
 }
 
 impl Position {
-    fn new(ctx_id: String, elem_id: String) -> Self {
+    fn new(ctx_id: Arc<String>, elem_id: Arc<String>) -> Self {
         Self {
             model_id: ctx_id,
             element_id: elem_id,
@@ -105,9 +99,8 @@ pub struct Context {
     id: String,
     model: Arc<Model>,
     fullfillment: f32,
-    visited_elements: BTreeMap<String, u32>,
+    visited_elements: BTreeMap<Arc<String>, u32>,
     eval_context: evalexpr::HashMapContext,
-    //generators: Vec<Rc<dyn Generator>>,
 }
 
 impl Context {
@@ -189,7 +182,7 @@ impl Machine {
             ..Default::default()
         };
 
-        if let Some(ctx) = self.contexts.get_mut(&step.position.model_id) {
+        if let Some(ctx) = self.contexts.get_mut(step.position.model_id.as_str()) {
             if let Some(name) = &ctx.model.name {
                 step.model_name = name.to_string();
             }
@@ -209,7 +202,7 @@ impl Machine {
             if let Some(value) = ctx.visited_elements.get(&step.position.element_id) {
                 let visited = value + 1;
                 ctx.visited_elements
-                    .insert(step.position.clone().element_id, visited);
+                    .insert(Arc::clone(&step.position.element_id), visited);
             } else {
                 let msg = format!(
                     "Expected the key {:?} to be found in unvisited_elements",
@@ -266,7 +259,7 @@ impl Machine {
         // Find the model in which the start element id exists
         for (key, ctx) in &self.contexts {
             if ctx.model.has_id(&self.start_pos.element_id) {
-                self.start_pos.model_id = key.to_string();
+                self.start_pos.model_id = Arc::new(key.to_string());
             }
         }
 
@@ -287,11 +280,11 @@ impl Machine {
             let mut unvisited_edges = Vec::new();
 
             for k in ctx.model.edges.read().unwrap().keys() {
-                visited_elements.insert(k.to_string(), 0);
-                unvisited_edges.push(Position::new(key.to_string(), k.to_string()));
+                visited_elements.insert(Arc::new(k.to_string()), 0);
+                unvisited_edges.push(Position::new(Arc::new(key.to_string()), Arc::new(k.to_string())));
             }
             for k in ctx.model.vertices.read().unwrap().keys() {
-                visited_elements.insert(k.to_string(), 0);
+                visited_elements.insert(Arc::new(k.to_string()), 0);
             }
             ctx.visited_elements = visited_elements;
             self.unvisited_edges.extend(unvisited_edges);
@@ -310,7 +303,7 @@ impl Machine {
     pub fn load_models(&mut self, models: Arc<Models>) -> Result<(), String> {
         log::debug!("Loading {} models", models.models.len());
         if let Some(pos) = &models.start_element_id {
-            self.start_pos.element_id = pos.to_string();
+            self.start_pos.element_id = Arc::new(pos.to_string());
         } else {
             let msg = "The Models data did not have a start_element_id. Start id is mandatory.";
             log::error!("{}", msg);
@@ -348,8 +341,8 @@ impl Machine {
                             ..Default::default()
                         };
                         s.positions.push(Position {
-                            model_id: key.clone(),
-                            element_id: k.to_string(),
+                            model_id: Arc::new(key.to_string()),
+                            element_id: Arc::new(k.to_string()),
                         });
                         self.shared_states.push(s);
                     } else {
@@ -360,8 +353,8 @@ impl Machine {
                             .unwrap();
                         if let Some(s) = self.shared_states.get_mut(index) {
                             s.positions.push(Position {
-                                model_id: key.clone(),
-                                element_id: k.to_string(),
+                                model_id: Arc::new(key.to_string()),
+                                element_id: Arc::new(k.to_string()),
                             })
                         }
                     }
@@ -385,7 +378,7 @@ impl Machine {
             Err(err) => return Err(err),
         };
 
-        if let Some(ctx) = self.contexts.get_mut(&current_pos.model_id) {
+        if let Some(ctx) = self.contexts.get_mut(&*current_pos.model_id) {
             let model = &ctx.model;
             // Check that the element does exist in the model
             if !model.has_id(&current_pos.element_id) {
@@ -399,15 +392,15 @@ impl Machine {
 
             // If the current position represents an edge the next element should be a Vertex.
             // That vertex is extracted from the edge target vertex.
-            if let Some(edge) = model.edges.read().unwrap().get(&current_pos.element_id) {
-                self.current_pos.element_id = edge.target_vertex_id.clone();
+            if let Some(edge) = model.edges.read().unwrap().get(&*current_pos.element_id) {
+                self.current_pos.element_id = Arc::new(edge.target_vertex_id.to_string());
                 return Ok(step);
             }
         }
 
         // If we have not found a step yet, the next step must be a an edge.
         // First use the current generator strategy.
-        if let Some(mut ctx) = self.contexts.get_mut(&current_pos.model_id).cloned() {
+        if let Some(mut ctx) = self.contexts.get_mut(&*current_pos.model_id).cloned() {
             match self.get_next_edge(&mut ctx) {
                 Ok(pos) => self.current_pos = pos,
                 Err(err) => {
@@ -426,7 +419,7 @@ impl Machine {
             .vertices
             .read()
             .unwrap()
-            .get(&self.current_pos.element_id)
+            .get(&*self.current_pos.element_id)
         {
             // Build a list of candidates of edges to select
             // Look for shared_states
@@ -450,7 +443,7 @@ impl Machine {
             for e in ctx.model.out_edges(&self.current_pos.element_id) {
                 let pos = Position {
                     model_id: self.current_pos.model_id.clone(),
-                    element_id: e.id.clone(),
+                    element_id: Arc::new(e.id.to_string()),
                 };
                 match &e.guard {
                     Some(guard) => {
@@ -517,10 +510,10 @@ impl Machine {
      */
     fn get_actions(&self, pos: &Position) -> (String, Vec<String>) {
         for (k, ctx) in &self.contexts {
-            if let Some(edge) = ctx.model.edges.read().unwrap().get(&pos.element_id) {
+            if let Some(edge) = ctx.model.edges.read().unwrap().get(&*pos.element_id) {
                 return (k.clone(), edge.actions.clone());
             }
-            if let Some(vertex) = ctx.model.vertices.read().unwrap().get(&pos.element_id) {
+            if let Some(vertex) = ctx.model.vertices.read().unwrap().get(&*pos.element_id) {
                 return (k.clone(), vertex.actions.clone());
             }
         }
