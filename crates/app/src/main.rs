@@ -186,7 +186,6 @@ fn main() {
             }
         }
 
-        #[cfg(feature = "online")]
         Some(("online", online_matches)) => {
             let file_read_result = io::read(
                 online_matches
