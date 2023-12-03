@@ -8,7 +8,6 @@ use std::{
     sync::Arc,
 };
 
-
 #[derive(Serialize, Deserialize, Clone, Default, Debug, Ord, Eq, PartialEq, PartialOrd)]
 pub struct Position {
     pub model_id: Arc<String>,
@@ -281,7 +280,10 @@ impl Machine {
 
             for k in ctx.model.edges.read().unwrap().keys() {
                 visited_elements.insert(Arc::new(k.to_string()), 0);
-                unvisited_edges.push(Position::new(Arc::new(key.to_string()), Arc::new(k.to_string())));
+                unvisited_edges.push(Position::new(
+                    Arc::new(key.to_string()),
+                    Arc::new(k.to_string()),
+                ));
             }
             for k in ctx.model.vertices.read().unwrap().keys() {
                 visited_elements.insert(Arc::new(k.to_string()), 0);
@@ -366,11 +368,13 @@ impl Machine {
     }
 
     pub fn step(&mut self) -> Result<Step, String> {
+        // First thing to do is to log the current position
         let step = match self.log_step() {
             Ok(s) => s,
             Err(err) => return Err(err),
         };
 
+        // Run any action(s) on the current position.
         match self.run_action() {
             Ok(_) => {}
             Err(err) => return Err(err),
@@ -390,7 +394,12 @@ impl Machine {
 
             // If the current position represents an edge the next element should be a Vertex.
             // That vertex is extracted from the edge target vertex.
-            if let Some(edge) = model.edges.read().unwrap().get(&*self.current_pos.element_id) {
+            if let Some(edge) = model
+                .edges
+                .read()
+                .unwrap()
+                .get(&*self.current_pos.element_id)
+            {
                 self.current_pos.element_id = Arc::new(edge.target_vertex_id.to_string());
                 return Ok(step);
             }
@@ -508,10 +517,22 @@ impl Machine {
      */
     fn get_actions(&self) -> (String, Vec<String>) {
         for (k, ctx) in &self.contexts {
-            if let Some(edge) = ctx.model.edges.read().unwrap().get(&*self.current_pos.element_id) {
+            if let Some(edge) = ctx
+                .model
+                .edges
+                .read()
+                .unwrap()
+                .get(&*self.current_pos.element_id)
+            {
                 return (k.clone(), edge.actions.clone());
             }
-            if let Some(vertex) = ctx.model.vertices.read().unwrap().get(&*self.current_pos.element_id) {
+            if let Some(vertex) = ctx
+                .model
+                .vertices
+                .read()
+                .unwrap()
+                .get(&*self.current_pos.element_id)
+            {
                 return (k.clone(), vertex.actions.clone());
             }
         }
