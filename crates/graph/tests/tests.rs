@@ -31,6 +31,65 @@ fn create_model() -> Model {
     model
 }
 
+fn create_bfs_model() -> Model {
+    let model: Model = Model::default();
+    let vertices = Arc::clone(&model.vertices);
+    let edges = Arc::clone(&model.edges);
+
+    vertices
+        .write()
+        .unwrap()
+        .insert("a".to_string(), Arc::new(Vertex::default().id("a")));
+    vertices
+        .write()
+        .unwrap()
+        .insert("b".to_string(), Arc::new(Vertex::default().id("b")));
+    vertices
+        .write()
+        .unwrap()
+        .insert("c".to_string(), Arc::new(Vertex::default().id("c")));
+    vertices
+        .write()
+        .unwrap()
+        .insert("d".to_string(), Arc::new(Vertex::default().id("d")));
+    vertices
+        .write()
+        .unwrap()
+        .insert("e".to_string(), Arc::new(Vertex::default().id("e")));
+    edges.write().unwrap().insert(
+        "a->b".to_string(),
+        Arc::new(Edge::default().id("a->b", "a", "b")),
+    );
+    edges.write().unwrap().insert(
+        "a->c".to_string(),
+        Arc::new(Edge::default().id("a->c", "a", "c")),
+    );
+    edges.write().unwrap().insert(
+        "b->d".to_string(),
+        Arc::new(Edge::default().id("a->d", "a", "d")),
+    );
+    edges.write().unwrap().insert(
+        "b->c".to_string(),
+        Arc::new(Edge::default().id("b->d", "b", "d")),
+    );
+    edges.write().unwrap().insert(
+        "c->b".to_string(),
+        Arc::new(Edge::default().id("c->d", "c", "d")),
+    );
+    edges.write().unwrap().insert(
+        "c->d".to_string(),
+        Arc::new(Edge::default().id("d->e", "d", "e")),
+    );
+    model
+}
+
+#[test]
+fn shortest_path_test() {
+    let model = create_bfs_model();
+    let path = model.get_shortest_path("a", "e");
+    assert_eq!(path.unwrap().len(), 2);
+}
+
 #[test]
 fn build_model_test() {
     let model = create_model();

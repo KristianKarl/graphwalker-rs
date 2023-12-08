@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, VecDeque},
     sync::{Arc, RwLock},
 };
 
@@ -185,6 +185,80 @@ impl Model {
             }
         }
         out_edges
+    }
+
+    pub fn get_shortest_path(&self, start: &str, end: &str) -> Option<Vec<Arc<Edge>>> {
+        if !self.has_id(start) {
+            let msg = format!(
+                "The start vertex: {} is not parth of the model: {}",
+                start, self.id
+            );
+            log::error!("{}", msg);
+            return None;
+        }
+        if !self.has_id(end) {
+            let msg = format!(
+                "The end vertex: {} is not parth of the model: {}",
+                end, self.id
+            );
+            log::error!("{}", msg);
+            return None;
+        }
+
+        let mut path: Vec<Arc<Edge>> = Vec::default();
+        let mut visited: Vec<Arc<Vertex>> = Vec::default();
+        let mut queue: VecDeque<Arc<Vertex>> = VecDeque::default();
+        let binding = self.vertices.read().unwrap();
+        let start_vertex = binding.get(start).unwrap();
+
+        visited.push(Arc::clone(start_vertex));
+        queue.push_back(Arc::clone(start_vertex));
+
+        while let Some(v) = queue.pop_front() {
+            if v.id == end {
+                return Some(self.recreate_shortest_path(start, end, path));
+            }
+
+            for edge in self.out_edges(&v.id) {
+                let binding = self.vertices.read().unwrap();
+                let vertex = binding.get(&edge.target_vertex_id).unwrap();
+
+                if !visited.contains(vertex) {
+                    visited.push(Arc::clone(vertex));
+                    queue.push_back(Arc::clone(vertex));
+                    path.push(edge);
+                }
+            }
+        }
+        None
+    }
+
+    fn recreate_shortest_path(
+        &self,
+        start: &str,
+        end: &str,
+        path: Vec<Arc<Edge>>,
+    ) -> Vec<Arc<Edge>> {
+        let mut target: &str = end;
+        let mut shortest_path: Vec<Arc<Edge>> = Vec::default();
+
+        while !path.is_empty() {
+            let pos = path
+                .iter()
+                .position(|e| e.target_vertex_id == target)
+                .unwrap();
+
+            if let Some(edge) = path.get(pos) {
+                shortest_path.push(Arc::clone(edge));
+                if edge.source_vertex_id == start {
+                    break;
+                } else {
+                    target = &edge.source_vertex_id;
+                }
+            }
+        }
+        shortest_path.reverse();
+        shortest_path
     }
 }
 
