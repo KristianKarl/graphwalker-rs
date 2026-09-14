@@ -2,6 +2,7 @@
 name = "graphwalker-io"
 version = "0.1.0"
 edition = "2021"
+rust-version.workspace = true
 description = "Model I/O for GraphWalker: JSON and GraphML/yEd format readers and writers"
 license = "MIT"
 

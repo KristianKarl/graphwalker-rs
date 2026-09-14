@@ -6,7 +6,7 @@ GraphWalker supports guards (boolean conditions on edges), actions (scripts that
 
 ## Prerequisites
 
-- **Rust** (1.70 or later) &mdash; install via [rustup](https://rustup.rs/)
+- **Rust** (1.88 or later) &mdash; install via [rustup](https://rustup.rs/)
 - **Git**
 - **Node.js and npm** (only needed if building the Studio frontend from source)
 
@@ -48,6 +48,7 @@ The main binaries are:
 |--------|----------|-------------|
 | `graphwalker` | `target/release/graphwalker` | CLI tool for offline/online test generation |
 | `graphwalker-studio` | `target/release/graphwalker-studio` | Web-based visual model editor and test runner |
+| `graphwalker-mcp` | `target/release/graphwalker-mcp` | Local Model Context Protocol server (Phase 0 health tool) |
 
 ## Quick start
 
@@ -63,6 +64,9 @@ graphwalker online -s RESTFUL -p 8080 -m model.json "random(edge_coverage(100))"
 
 # Start the visual Studio
 graphwalker-studio
+
+# Start the local MCP server (normally launched by an MCP client)
+graphwalker-mcp
 ```
 
 ## Documentation
@@ -77,6 +81,7 @@ Full documentation is available at [graphwalker.github.io/graphwalker-rs](https:
 - [REST API](https://graphwalker.github.io/graphwalker-rs/rest-api)
 - [WebSocket API](https://graphwalker.github.io/graphwalker-rs/websocket-api)
 - [GraphWalker Studio](https://graphwalker.github.io/graphwalker-rs/studio)
+- [MCP Server Plan](https://graphwalker.github.io/graphwalker-rs/mcp)
 
 ## License
 

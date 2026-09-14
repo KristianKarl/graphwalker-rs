@@ -12,7 +12,7 @@ This guide walks you through installing GraphWalker, creating a model, and gener
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) 1.70 or later
+- [Rust](https://rustup.rs/) 1.88 or later
 - Git
 
 ### Build from source
