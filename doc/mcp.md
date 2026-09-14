@@ -268,6 +268,17 @@ Phase 2 completed on 2026-09-14:
 
 Exit criterion: an MCP client can build and revise a model, export and validate it, start an execution from its snapshot, walk it to completion, update data, inspect coverage, restart deterministically, and close both the execution and draft.
 
+Phase 3 completed on 2026-09-14:
+
+- `graphwalker-mcp` exposes 18 deterministic, schema-backed tools over stdio: health, nine draft-authoring tools, validation, GraphML conversion, and six execution tools.
+- Tool inputs and outputs use dedicated MCP DTOs. Optional patch fields preserve the distinction between omission and explicit `null`, while exported models remain canonical GraphWalker JSON objects.
+- The adapter owns independent `DraftRegistry` and `ExecutionRegistry` instances and delegates all GraphWalker behavior to `graphwalker-service`; it does not route through REST or reproduce the execution engine.
+- Successful calls return typed structured content. Service failures return MCP tool execution errors with stable snake-case codes and actionable messages; malformed MCP requests and argument decoding are handled by the SDK.
+- Starting from a draft uses a revision-checked immutable snapshot and rejects invalid drafts. Inline starts are also validated before execution state is created.
+- Tool annotations identify read-only and destructive operations, declare that the tools do not access the open world, and keep discovery order stable.
+- Stdio protocol tests exercise every tool, the complete create/revise/export/validate/start/walk/data/status/restart/close/discard workflow, stale revisions, closed and discarded IDs, GraphML conversion, inline and draft execution, interleaved draft/execution isolation, cancellation notification handling, protocol-only stdout, and clean EOF shutdown.
+- The focused MCP checks and the complete workspace test suite pass with the workspace MSRV, Rust 1.88.0. Existing REST and WebSocket interfaces remain unchanged.
+
 ### Phase 4: Add graph construction to REST separately
 
 This phase is a separate implementation and should be delivered in a separate pull request after the service and MCP contracts are stable.

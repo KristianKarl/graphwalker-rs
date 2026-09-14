@@ -705,6 +705,8 @@ dependencies = [
 name = "graphwalker-mcp"
 version = "0.1.0"
 dependencies = [
+ "graphwalker-io",
+ "graphwalker-service",
  "rmcp",
  "serde",
  "serde_json",
