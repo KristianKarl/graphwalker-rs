@@ -1,7 +1,7 @@
 ---
 layout: default
 title: MCP Server Plan
-nav_order: 11
+nav_order: 12
 ---
 
 # MCP Server Plan
@@ -310,6 +310,15 @@ Phase 4 completed on 2026-09-14:
 5. Test manually with [MCP Inspector](https://github.com/modelcontextprotocol/inspector).
 
 Exit criterion: a new user can install the binary, configure a client, and complete the example workflow from the documentation. REST documentation may be released independently with Phase 4.
+
+Phase 5 completed on 2026-09-14:
+
+- `doc/mcp-server.md` is the user-facing guide for installation, generic client configuration, the complete authoring-to-execution workflow, all 18 tools, patch and revision semantics, process-local lifecycle, limits, structured errors, safety boundaries, and protocol support.
+- The root README and documentation index identify the implemented MCP server and link to the guide; this implementation plan remains available separately.
+- A tag-driven GitHub Actions workflow builds `graphwalker-mcp` with Rust 1.88 for Linux x86-64, macOS Apple silicon, and Windows x86-64. It packages the binary with README and license files, publishes SHA-256 checksums, and attaches the artifacts to a generated GitHub release.
+- The documented `cargo install --locked --path graphwalker-mcp` command was verified using a clean installation root, and the Linux release archive/checksum steps were smoke-tested locally.
+- The official MCP Inspector CLI discovered all 18 tools and invoked `health` successfully. Its strict portability check exposed five bare schemas for GraphWalker JSON values; those now advertise object schemas, have protocol regression coverage, and pass the Inspector strict check with zero errors.
+- The complete workspace test suite passes with Rust 1.88.0. The MCP crate also passes targeted formatting and Clippy checks; existing workspace-wide formatting and Clippy findings outside the MCP crate remain unchanged.
 
 ### Later phases
 

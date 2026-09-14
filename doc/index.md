@@ -19,7 +19,7 @@ Tests are modeled as graphs where **vertices** represent states and **edges** re
 - **Guards and actions** &mdash; edges can have boolean guards and script actions that modify execution state
 - **Multi-model support** &mdash; coordinate across models using shared states
 - **Requirements tracking** &mdash; tag elements with requirement IDs and track coverage
-- **Multiple interfaces** &mdash; CLI (offline batch), REST API, WebSocket API, and a visual Studio editor
+- **Multiple interfaces** &mdash; CLI, REST API, WebSocket API, a local MCP server, and a visual Studio editor
 - **Deterministic replay** &mdash; seed-based random generation for reproducible test paths
 
 ## Getting started
@@ -39,3 +39,4 @@ See the [Getting Started](getting-started) guide for a walkthrough of creating a
 | [REST API](rest-api) | HTTP API for online test execution |
 | [WebSocket API](websocket-api) | WebSocket protocol for real-time interaction |
 | [GraphWalker Studio](studio) | Visual model editor and test runner |
+| [MCP Server](mcp-server) | Configure an AI client to author models and drive executions |

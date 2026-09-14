@@ -175,6 +175,7 @@ pub struct DraftInput {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub struct ValidateModelInput {
+    #[schemars(with = "Option<HashMap<String, Value>>")]
     pub model: Option<Value>,
     pub draft_id: Option<String>,
 }
@@ -186,6 +187,7 @@ pub struct ConvertGraphmlInput {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub struct StartExecutionInput {
+    #[schemars(with = "Option<HashMap<String, Value>>")]
     pub model: Option<Value>,
     pub draft_id: Option<String>,
     pub revision: Option<u64>,
@@ -262,6 +264,7 @@ pub struct EdgeMutationOutput {
 
 #[derive(Debug, Serialize, schemars::JsonSchema)]
 pub struct ModelMutationOutput {
+    #[schemars(with = "HashMap<String, Value>")]
     pub model: Value,
     pub revision: u64,
 }
@@ -274,6 +277,7 @@ pub struct RemoveElementOutput {
 
 #[derive(Debug, Serialize, schemars::JsonSchema)]
 pub struct ExportModelOutput {
+    #[schemars(with = "HashMap<String, Value>")]
     pub model: Value,
     pub revision: u64,
 }
@@ -292,6 +296,7 @@ pub struct ValidateModelOutput {
 
 #[derive(Debug, Serialize, schemars::JsonSchema)]
 pub struct ConvertGraphmlOutput {
+    #[schemars(with = "HashMap<String, Value>")]
     pub model: Value,
 }
 

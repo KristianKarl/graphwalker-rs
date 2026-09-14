@@ -48,7 +48,7 @@ The main binaries are:
 |--------|----------|-------------|
 | `graphwalker` | `target/release/graphwalker` | CLI tool for offline/online test generation |
 | `graphwalker-studio` | `target/release/graphwalker-studio` | Web-based visual model editor and test runner |
-| `graphwalker-mcp` | `target/release/graphwalker-mcp` | Local Model Context Protocol server (Phase 0 health tool) |
+| `graphwalker-mcp` | `target/release/graphwalker-mcp` | Local MCP server for model authoring, validation, conversion, and execution |
 
 ## Quick start
 
@@ -69,6 +69,8 @@ graphwalker-studio
 graphwalker-mcp
 ```
 
+Install only the MCP server from a checkout with `cargo install --locked --path graphwalker-mcp`, then configure an MCP client to launch `graphwalker-mcp` over stdio. See the [MCP Server guide](https://graphwalker.github.io/graphwalker-rs/mcp-server) for client configuration and a complete model-authoring workflow.
+
 ## Documentation
 
 Full documentation is available at [graphwalker.github.io/graphwalker-rs](https://graphwalker.github.io/graphwalker-rs/).
@@ -81,7 +83,8 @@ Full documentation is available at [graphwalker.github.io/graphwalker-rs](https:
 - [REST API](https://graphwalker.github.io/graphwalker-rs/rest-api)
 - [WebSocket API](https://graphwalker.github.io/graphwalker-rs/websocket-api)
 - [GraphWalker Studio](https://graphwalker.github.io/graphwalker-rs/studio)
-- [MCP Server Plan](https://graphwalker.github.io/graphwalker-rs/mcp)
+- [MCP Server](https://graphwalker.github.io/graphwalker-rs/mcp-server)
+- [MCP Implementation Plan](https://graphwalker.github.io/graphwalker-rs/mcp)
 
 ## License
 
