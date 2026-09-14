@@ -729,9 +729,12 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "futures",
+ "graphwalker-io",
  "graphwalker-service",
+ "serde",
  "serde_json",
  "tokio",
+ "tower",
  "tower-http",
  "tracing",
 ]

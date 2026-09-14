@@ -14,9 +14,11 @@ graphwalker online -s RESTFUL -p 8080 -m model.json "random(edge_coverage(100))"
 
 All endpoints are under the `/graphwalker` path prefix.
 
-## Response format
+## Legacy execution response format
 
-Successful responses include `"result": "ok"`. Errors include `"result": "nok"` with an `"error"` message.
+The execution endpoints documented in the next section preserve their existing wire format. Successful responses include `"result": "ok"`. Errors include `"result": "nok"` with an `"error"` message.
+
+The draft-authoring API uses conventional HTTP status codes and typed JSON responses instead. It never adds a `result` wrapper.
 
 ---
 
@@ -180,6 +182,224 @@ Get coverage statistics for the current execution.
 | `totalNumberOfUnvisitedEdges` | Edges not yet visited |
 | `vertexCoverage` | Percentage of vertices visited (0&ndash;100) |
 | `edgeCoverage` | Percentage of edges visited (0&ndash;100) |
+
+---
+
+## Model draft authoring
+
+Model authoring is an independent, resource-oriented API under `/graphwalker/drafts`. Drafts are process-local and ephemeral: export a completed model before the server stops. Starting or restarting the REST server discards every draft.
+
+The server can be started without preloading a model when only authoring is needed:
+
+```bash
+graphwalker online -s RESTFUL -p 8080
+```
+
+Every successful mutation returns the new numeric `revision`. Mutation bodies accept an optional `expected_revision`; if it does not equal the current revision, the server returns `409 Conflict` without changing the draft. Supplying revisions is recommended whenever multiple requests or clients could edit the same draft.
+
+JSON request bodies are limited to 1 MiB and must use `Content-Type: application/json` or a compatible `application/*+json` media type. Exported models retain the canonical GraphWalker field names described in the [JSON format](json-format), while authoring request and response envelope fields use `snake_case`.
+
+### Authoring routes
+
+| Method | Route | Success | Purpose |
+| --- | --- | --- | --- |
+| `POST` | `/graphwalker/drafts` | `201 Created` | Create an empty single-model draft |
+| `GET` | `/graphwalker/drafts/{draft_id}` | `200 OK` | Export canonical GraphWalker JSON and its revision |
+| `PATCH` | `/graphwalker/drafts/{draft_id}` | `200 OK` | Patch model metadata |
+| `DELETE` | `/graphwalker/drafts/{draft_id}` | `200 OK` | Discard the draft |
+| `POST` | `/graphwalker/drafts/{draft_id}/vertices` | `201 Created` | Add a vertex |
+| `PATCH` | `/graphwalker/drafts/{draft_id}/vertices/{vertex_id}` | `200 OK` | Patch a vertex |
+| `POST` | `/graphwalker/drafts/{draft_id}/edges` | `201 Created` | Add an edge |
+| `PATCH` | `/graphwalker/drafts/{draft_id}/edges/{edge_id}` | `200 OK` | Patch an edge |
+| `DELETE` | `/graphwalker/drafts/{draft_id}/elements/{element_id}` | `200 OK` | Remove a vertex or edge |
+| `GET` | `/graphwalker/drafts/{draft_id}/validation` | `200 OK` | Validate the current draft |
+
+### Create a draft
+
+`POST /graphwalker/drafts`
+
+All fields are optional. Omitted list and object fields default to empty values.
+
+```json
+{
+  "model_id": "checkout-model",
+  "name": "Checkout",
+  "generator": "random(edge_coverage(100))",
+  "actions": ["global.started = true"],
+  "requirements": ["REQ-1"],
+  "properties": { "owner": "payments" }
+}
+```
+
+Response (`201 Created`):
+
+```json
+{
+  "draft_id": "draft_550e8400-e29b-41d4-a716-446655440000",
+  "model_id": "checkout-model",
+  "revision": 0
+}
+```
+
+When `model_id` is omitted, GraphWalker generates it. The `draft_id` identifies mutable server state and is deliberately different from the GraphWalker model ID.
+
+### Add vertices and edges
+
+`POST /graphwalker/drafts/{draft_id}/vertices`
+
+```json
+{
+  "id": "v_cart",
+  "name": "v_Cart",
+  "shared_state": null,
+  "actions": [],
+  "requirements": ["REQ-CART"],
+  "properties": {},
+  "expected_revision": 0
+}
+```
+
+Response (`201 Created`):
+
+```json
+{
+  "vertex": {
+    "id": "v_cart",
+    "name": "v_Cart",
+    "shared_state": null,
+    "actions": [],
+    "requirements": ["REQ-CART"],
+    "properties": {}
+  },
+  "revision": 1
+}
+```
+
+`POST /graphwalker/drafts/{draft_id}/edges`
+
+```json
+{
+  "id": "e_start",
+  "name": "e_Start",
+  "source_vertex_id": null,
+  "target_vertex_id": "v_cart",
+  "guard": null,
+  "actions": [],
+  "requirements": [],
+  "properties": {},
+  "weight": 1.0,
+  "dependency": 0,
+  "expected_revision": 1
+}
+```
+
+`target_vertex_id` is required and must identify an existing vertex. Omit `source_vertex_id` or set it to `null` for a start edge. Element IDs must be unique across both vertices and edges. Weight must be between `0.0` and `1.0`; dependency must be between `0` and `100`.
+
+### Patch a model, vertex, or edge
+
+Use `PATCH` with only the fields that should change. An omitted field is retained. An explicit `null` clears an optional field or resets a list/object field to its empty value.
+
+Set the start element:
+
+```http
+PATCH /graphwalker/drafts/{draft_id}
+Content-Type: application/json
+```
+
+```json
+{
+  "start_element_id": "e_start",
+  "expected_revision": 2
+}
+```
+
+Model patch fields are `name`, `generator`, `start_element_id`, `actions`, `requirements`, `properties`, and `predefined_path_edge_ids`.
+
+Vertex patch fields are `name`, `shared_state`, `actions`, `requirements`, and `properties`. Edge patch fields are `name`, `source_vertex_id`, `target_vertex_id`, `guard`, `actions`, `requirements`, `properties`, `weight`, and `dependency`. `target_vertex_id` cannot be cleared.
+
+### Export and validate
+
+`GET /graphwalker/drafts/{draft_id}` returns a JSON object rather than a JSON-encoded string:
+
+```json
+{
+  "model": {
+    "models": [
+      {
+        "id": "checkout-model",
+        "generator": "random(edge_coverage(100))",
+        "vertices": [],
+        "edges": []
+      }
+    ]
+  },
+  "revision": 3
+}
+```
+
+`GET /graphwalker/drafts/{draft_id}/validation` returns ordered validation messages:
+
+```json
+{
+  "valid": true,
+  "issues": [],
+  "revision": 3
+}
+```
+
+Validation does not mutate the draft. A missing or invalid generator is reported as an issue.
+
+### Remove elements and discard drafts
+
+`DELETE /graphwalker/drafts/{draft_id}/elements/{element_id}` accepts query parameters:
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `cascade` | `false` | Also remove edges connected to a deleted vertex |
+| `cleanup_references` | `false` | Remove references from the start element and predefined path |
+| `expected_revision` | omitted | Require the current draft revision |
+
+Example response:
+
+```json
+{
+  "removed_ids": ["e_checkout", "v_checkout"],
+  "revision": 8
+}
+```
+
+`DELETE /graphwalker/drafts/{draft_id}` releases the complete draft and returns:
+
+```json
+{ "discarded": true }
+```
+
+Later requests for that ID return `404 Not Found`.
+
+### Authoring errors
+
+Authoring failures always return a JSON body:
+
+```json
+{
+  "code": "revision_conflict",
+  "message": "Expected revision 3, but the draft is at revision 4"
+}
+```
+
+| Status | Typical codes |
+| --- | --- |
+| `400 Bad Request` | `invalid_json`, `invalid_query` |
+| `404 Not Found` | `draft_not_found` |
+| `409 Conflict` | `revision_conflict`, `duplicate_element_id`, `referenced_element` |
+| `410 Gone` | `draft_expired` |
+| `413 Payload Too Large` | `payload_too_large` |
+| `415 Unsupported Media Type` | `unsupported_media_type` |
+| `422 Unprocessable Entity` | `invalid_model`, `unknown_vertex`, `missing_target_vertex`, `invalid_weight`, `invalid_dependency`, `invalid_element` |
+| `429 Too Many Requests` | `draft_limit_reached`, `model_limit_reached` |
+| `500 Internal Server Error` | `draft_unavailable`, `internal` |
+
+Failed mutations are atomic: neither the model nor its revision changes.
 
 ---
 

@@ -291,6 +291,16 @@ This phase is a separate implementation and should be delivered in a separate pu
 
 Exit criterion: REST graph construction has an approved HTTP contract and passes its own integration suite without changing the MCP tools or existing execution endpoints.
 
+Phase 4 completed on 2026-09-14:
+
+- Graph construction is implemented in dedicated REST DTO, handler, and integration-test modules. The MCP adapter is unchanged, and the existing execution and WebSocket routes retain their established response formats.
+- Ten resource-oriented routes under `/graphwalker/drafts` cover draft creation, model/vertex/edge updates, element removal, export, validation, and discard. Draft and element IDs are path parameters; optional expected revisions remain explicit mutation fields.
+- Authoring responses contain typed JSON without legacy `"result"` wrappers. Failures use conventional HTTP status codes and stable `{ "code", "message" }` bodies.
+- JSON mutation bodies require a JSON media type and have an authoring-specific 1 MiB limit. The existing `/graphwalker/load` request behavior is not changed by that limit.
+- REST integration tests cover the complete construction workflow, exact methods and content types, malformed bodies and query values, missing and expired drafts, registry limits, service error mapping, failed-mutation atomicity, and competing writes with the same expected revision.
+- `doc/rest-api.md` documents the independent authoring contract, patch/null semantics, lifecycle, limits, schemas, status codes, and examples.
+- Focused REST tests and the complete workspace test suite pass with Rust 1.88.0, including the pre-existing REST, WebSocket, CLI, service, MCP, core, and Studio tests.
+
 ### Phase 5: Documentation and release integration
 
 1. Document building and launching `graphwalker-mcp`.
