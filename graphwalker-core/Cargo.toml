@@ -2,6 +2,7 @@
 name = "graphwalker-core"
 version = "0.1.0"
 edition = "2021"
+rust-version.workspace = true
 description = "Core domain model and execution engine for GraphWalker model-based testing"
 license = "MIT"
 
