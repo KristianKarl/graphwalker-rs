@@ -5,14 +5,9 @@ edition = "2021"
 rust-version.workspace = true
 
 [dependencies]
-graphwalker-core = { path = "../graphwalker-core" }
-graphwalker-dsl = { path = "../graphwalker-dsl" }
-graphwalker-io = { path = "../graphwalker-io" }
-graphwalker-model-checker = { path = "../graphwalker-model-checker" }
-rand = "0.8"
+graphwalker-service = { path = "../graphwalker-service" }
 axum = { version = "0.8", features = ["ws"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "signal"] }
-serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tower-http = { version = "0.6", features = ["cors"] }
 futures = "0.3"

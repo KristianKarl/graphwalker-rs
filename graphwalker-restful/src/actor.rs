@@ -1,17 +1,16 @@
 use std::sync::mpsc;
 
-use rand::prelude::*;
-
-use graphwalker_core::machine::{ExecutionContext, Machine};
-use graphwalker_core::model::{Action, EdgeIndex, ElementIndex, VertexIndex};
-use graphwalker_dsl::generator::parse_generator;
-use graphwalker_io::graphml::read_graphml_string;
-use graphwalker_io::json::{read_json_string, write_json_string};
-use graphwalker_io::ModelContext;
+use graphwalker_service::{
+    convert_graphml, validate_model, ExecutionId, ExecutionLimits, ExecutionRegistry,
+    StartExecution,
+};
 use serde_json::{json, Value};
 use tokio::sync::oneshot;
 use tracing::debug;
 
+/// Legacy transport commands. Domain behavior lives in `graphwalker-service`;
+/// this actor only maps typed service results to the established REST and
+/// WebSocket JSON shapes.
 pub enum Command {
     Load {
         json_body: String,
@@ -56,49 +55,61 @@ pub enum Command {
 }
 
 struct MachineState {
-    machine: Option<Machine>,
-    contexts_snapshot: Vec<ModelContext>,
+    registry: ExecutionRegistry,
+    execution_id: Option<ExecutionId>,
+}
+
+impl MachineState {
+    fn new() -> Self {
+        // Loading is transactional: allow the replacement worker to start
+        // before closing the currently active execution.
+        Self {
+            registry: ExecutionRegistry::new(ExecutionLimits { max_executions: 2 }),
+            execution_id: None,
+        }
+    }
+
+    fn execution_id(&self) -> Result<&ExecutionId, String> {
+        self.execution_id
+            .as_ref()
+            .ok_or_else(|| "No model(s) are loaded.".to_string())
+    }
 }
 
 pub fn spawn_machine_thread() -> mpsc::Sender<Command> {
     let (tx, rx) = mpsc::channel::<Command>();
-
     std::thread::spawn(move || {
-        let mut state = MachineState {
-            machine: None,
-            contexts_snapshot: Vec::new(),
-        };
-
-        while let Ok(cmd) = rx.recv() {
-            match cmd {
+        let mut state = MachineState::new();
+        while let Ok(command) = rx.recv() {
+            match command {
                 Command::Load {
                     json_body,
                     seed,
                     global_data,
                     reply,
                 } => {
-                    let _ = reply.send(handle_load(&mut state, &json_body, seed, global_data.as_deref()));
+                    let _ = reply.send(handle_load(&mut state, &json_body, seed, global_data));
                 }
                 Command::Check { json_body, reply } => {
                     let _ = reply.send(handle_check(&json_body));
                 }
                 Command::HasNext { reply } => {
-                    let _ = reply.send(handle_has_next(&mut state));
+                    let _ = reply.send(handle_has_next(&state));
                 }
                 Command::GetNext { verbose, reply } => {
-                    let _ = reply.send(handle_get_next(&mut state, verbose));
+                    let _ = reply.send(handle_get_next(&state, verbose));
                 }
                 Command::GetData { reply } => {
-                    let _ = reply.send(handle_get_data(&mut state));
+                    let _ = reply.send(handle_get_data(&state));
                 }
                 Command::SetData { script, reply } => {
-                    let _ = reply.send(handle_set_data(&mut state, &script));
+                    let _ = reply.send(handle_set_data(&state, &script));
                 }
                 Command::Restart { reply } => {
-                    let _ = reply.send(handle_restart(&mut state));
+                    let _ = reply.send(handle_restart(&state));
                 }
                 Command::GetStatistics { reply } => {
-                    let _ = reply.send(handle_get_statistics(&mut state));
+                    let _ = reply.send(handle_get_statistics(&state));
                 }
                 Command::GetModel { reply } => {
                     let _ = reply.send(handle_get_model(&state));
@@ -112,14 +123,17 @@ pub fn spawn_machine_thread() -> mpsc::Sender<Command> {
             }
         }
     });
-
     tx
 }
 
 pub fn handle_check(json_body: &str) -> Result<Value, String> {
-    let contexts = read_json_string(json_body).map_err(|e| e.to_string())?;
-    let issues = graphwalker_model_checker::check_contexts(&contexts);
-    let messages: Vec<&str> = issues.iter().map(|i| i.message.as_str()).collect();
+    let model = serde_json::from_str(json_body).map_err(|error| error.to_string())?;
+    let result = validate_model(&model).map_err(|error| error.to_string())?;
+    let messages = result
+        .issues
+        .into_iter()
+        .map(|issue| issue.message)
+        .collect::<Vec<_>>();
     Ok(json!({"result": "ok", "issues": messages}))
 }
 
@@ -127,287 +141,139 @@ fn handle_load(
     state: &mut MachineState,
     json_body: &str,
     seed: Option<u64>,
-    global_data: Option<&str>,
+    global_data: Option<String>,
 ) -> Result<Value, String> {
-    let contexts = read_json_string(json_body).map_err(|e| e.to_string())?;
+    let model = serde_json::from_str(json_body).map_err(|error| error.to_string())?;
+    let started = state
+        .registry
+        .start(StartExecution {
+            model,
+            seed,
+            global_data,
+        })
+        .map_err(|error| error.to_string())?;
 
-    let actual_seed = seed.unwrap_or_else(|| rand::thread_rng().gen());
-
-    let mut entries = Vec::new();
-    for ctx in &contexts {
-        let gen_str = ctx
-            .generator
-            .as_deref()
-            .ok_or("Model has no generator specified")?;
-        let generator = parse_generator(gen_str).map_err(|e| e.to_string())?;
-        let mut exec_ctx = ExecutionContext::new_with_seed(ctx.model.clone(), actual_seed);
-        if let Some(ref start_id) = ctx.start_element_id {
-            if let Some(element) = exec_ctx.model().element_by_id(start_id) {
-                exec_ctx.set_next_element(Some(element));
-            }
-        }
-        entries.push((exec_ctx, generator));
+    if let Some(previous) = state.execution_id.replace(started.execution_id) {
+        let _ = state.registry.close(&previous);
     }
-
-    let machine = Machine::new_with_seed(entries, actual_seed).map_err(|e| e.to_string())?;
-
-    if let Some(data) = global_data {
-        for stmt in data.split(';') {
-            let trimmed = stmt.trim();
-            if !trimmed.is_empty() {
-                let action = Action::new(&format!("global.{}", trimmed));
-                machine
-                    .current_context()
-                    .execute_action(&action)
-                    .map_err(|e| e.to_string())?;
-            }
-        }
-    }
-
-    state.machine = Some(machine);
-    state.contexts_snapshot = contexts;
-
-    Ok(json!({"result": "ok", "seed": actual_seed}))
+    Ok(json!({"result": "ok", "seed": started.seed}))
 }
 
-fn handle_has_next(state: &mut MachineState) -> Result<Value, String> {
-    let machine = state.machine.as_mut().ok_or("No model(s) are loaded.")?;
-    let has = machine.has_next_step();
-    Ok(json!({"result": "ok", "hasNext": has.to_string()}))
+fn handle_has_next(state: &MachineState) -> Result<Value, String> {
+    let status = state
+        .registry
+        .status(state.execution_id()?)
+        .map_err(|error| error.to_string())?;
+    Ok(json!({"result": "ok", "hasNext": status.has_next.to_string()}))
 }
 
-fn handle_get_next(state: &mut MachineState, verbose: bool) -> Result<Value, String> {
-    let machine = state.machine.as_mut().ok_or("No model(s) are loaded.")?;
+fn handle_get_next(state: &MachineState, verbose: bool) -> Result<Value, String> {
+    let step = state
+        .registry
+        .next_step(state.execution_id()?)
+        .map_err(|error| error.to_string())?;
+    let element = step
+        .element
+        .ok_or_else(|| "No next step is available".to_string())?;
 
-    machine.get_next_step().map_err(|e| e.to_string())?;
-
-    let ctx_idx = machine.current_context_index();
-    let ctx = machine.context(ctx_idx);
-    let element = ctx.current_element().ok_or("No current element")?;
-
-    let name = element_name_from_ctx(ctx, element);
-    let id = element_id_from_ctx(ctx, element);
-    let model_id = ctx.model().id().to_string();
-
-    let model_name = ctx.model().name().unwrap_or("?");
-    let data = ctx.data();
     debug!(
-        model = model_name,
-        element = name,
-        data = data,
+        model = element.model_id,
+        element = element.name,
+        data = element.data,
         "getNext"
     );
-
-    let mut resp = json!({
+    let mut response = json!({
         "result": "ok",
-        "currentElementName": name,
-        "currentElementID": id,
-        "modelId": model_id,
+        "currentElementName": element.name,
+        "currentElementID": element.id,
+        "modelId": element.model_id,
     });
-
     if verbose {
-        let data = ctx.data();
-        let visit_count = ctx.visit_count(element);
-        let total_count = ctx.total_visit_count();
-        let fulfilment = machine.get_fulfilment(ctx_idx);
-
-        resp["data"] = json!(data);
-        resp["visitedCount"] = json!(visit_count);
-        resp["totalCount"] = json!(total_count);
-        resp["stopConditionFulfillment"] = json!(fulfilment);
+        response["data"] = json!(element.data);
+        response["visitedCount"] = json!(element.visited_count);
+        response["totalCount"] = json!(element.total_count);
+        response["stopConditionFulfillment"] = json!(element.stop_condition_fulfillment);
     }
-
-    Ok(resp)
+    Ok(response)
 }
 
-fn handle_get_data(state: &mut MachineState) -> Result<Value, String> {
-    let machine = state.machine.as_mut().ok_or("No model(s) are loaded.")?;
-
-    let ctx = machine.current_context();
-    let data = ctx.data();
-
+fn handle_get_data(state: &MachineState) -> Result<Value, String> {
+    let data = state
+        .registry
+        .data(state.execution_id()?)
+        .map_err(|error| error.to_string())?;
     Ok(json!({"result": "ok", "data": data}))
 }
 
-fn handle_set_data(state: &mut MachineState, script: &str) -> Result<Value, String> {
-    let machine = state.machine.as_mut().ok_or("No model(s) are loaded.")?;
-
-    let action = Action::new(script);
-    let ctx_idx = machine.current_context_index();
-    machine
-        .context_mut(ctx_idx)
-        .execute_action(&action)
-        .map_err(|e| e.to_string())?;
-
+fn handle_set_data(state: &MachineState, script: &str) -> Result<Value, String> {
+    state
+        .registry
+        .set_data(state.execution_id()?, script)
+        .map_err(|error| error.to_string())?;
     Ok(json!({"result": "ok"}))
 }
 
-fn handle_restart(state: &mut MachineState) -> Result<Value, String> {
-    if state.contexts_snapshot.is_empty() {
-        return Err("No model(s) are loaded.".to_string());
-    }
-
-    let mut entries = Vec::new();
-    for ctx in &state.contexts_snapshot {
-        let gen_str = ctx
-            .generator
-            .as_deref()
-            .ok_or("Model has no generator specified")?;
-        let generator = parse_generator(gen_str).map_err(|e| e.to_string())?;
-        let mut exec_ctx = ExecutionContext::new(ctx.model.clone());
-        if let Some(ref start_id) = ctx.start_element_id {
-            if let Some(element) = exec_ctx.model().element_by_id(start_id) {
-                exec_ctx.set_next_element(Some(element));
-            }
-        }
-        entries.push((exec_ctx, generator));
-    }
-
-    let machine = Machine::new(entries).map_err(|e| e.to_string())?;
-    state.machine = Some(machine);
-
+fn handle_restart(state: &MachineState) -> Result<Value, String> {
+    state
+        .registry
+        .restart(state.execution_id()?)
+        .map_err(|error| error.to_string())?;
     Ok(json!({"result": "ok"}))
 }
 
-fn handle_get_statistics(state: &mut MachineState) -> Result<Value, String> {
-    let machine = state.machine.as_ref().ok_or("No model(s) are loaded.")?;
-
-    let mut total_vertices = 0usize;
-    let mut total_edges = 0usize;
-    let mut visited_vertices = 0usize;
-    let mut visited_edges = 0usize;
-
-    for i in 0..machine.context_count() {
-        let ctx = machine.context(i);
-        let model = ctx.model();
-
-        let nv = model.vertices().len();
-        let ne = model.edges().len();
-        total_vertices += nv;
-        total_edges += ne;
-
-        for vi in 0..nv {
-            if ctx.is_visited(ElementIndex::Vertex(VertexIndex(vi))) {
-                visited_vertices += 1;
-            }
-        }
-        for ei in 0..ne {
-            if ctx.is_visited(ElementIndex::Edge(EdgeIndex(ei))) {
-                visited_edges += 1;
-            }
-        }
-    }
-
-    let vertex_coverage = if total_vertices > 0 {
-        (visited_vertices as f64 / total_vertices as f64) * 100.0
-    } else {
-        0.0
-    };
-    let edge_coverage = if total_edges > 0 {
-        (visited_edges as f64 / total_edges as f64) * 100.0
-    } else {
-        0.0
-    };
-
+fn handle_get_statistics(state: &MachineState) -> Result<Value, String> {
+    let statistics = state
+        .registry
+        .statistics(state.execution_id()?)
+        .map_err(|error| error.to_string())?;
     Ok(json!({
         "result": "ok",
-        "totalNumberOfVertices": total_vertices,
-        "totalNumberOfEdges": total_edges,
-        "totalNumberOfVisitedVertices": visited_vertices,
-        "totalNumberOfVisitedEdges": visited_edges,
-        "totalNumberOfUnvisitedVertices": total_vertices - visited_vertices,
-        "totalNumberOfUnvisitedEdges": total_edges - visited_edges,
-        "vertexCoverage": vertex_coverage as u32,
-        "edgeCoverage": edge_coverage as u32,
+        "totalNumberOfVertices": statistics.total_vertices,
+        "totalNumberOfEdges": statistics.total_edges,
+        "totalNumberOfVisitedVertices": statistics.visited_vertices,
+        "totalNumberOfVisitedEdges": statistics.visited_edges,
+        "totalNumberOfUnvisitedVertices": statistics.unvisited_vertices,
+        "totalNumberOfUnvisitedEdges": statistics.unvisited_edges,
+        "vertexCoverage": statistics.vertex_coverage,
+        "edgeCoverage": statistics.edge_coverage,
     }))
 }
 
 fn handle_get_model(state: &MachineState) -> Result<Value, String> {
-    if state.contexts_snapshot.is_empty() {
-        return Err("No model(s) are loaded.".to_string());
-    }
-
-    let json_str = write_json_string(&state.contexts_snapshot).map_err(|e| e.to_string())?;
-    Ok(json!({"result": "ok", "models": json_str}))
+    let model = state
+        .registry
+        .model(state.execution_id()?)
+        .map_err(|error| error.to_string())?;
+    Ok(json!({"result": "ok", "models": model.model.to_string()}))
 }
 
 fn handle_update_all_elements(state: &MachineState) -> Result<Value, String> {
-    let machine = state.machine.as_ref().ok_or("No model(s) are loaded.")?;
-
-    let mut elements = Vec::new();
-
-    for i in 0..machine.context_count() {
-        let ctx = machine.context(i);
-        let model = ctx.model();
-        let model_id = model.id().to_string();
-
-        for vi in 0..model.vertices().len() {
-            let vertex = model.vertex(VertexIndex(vi));
-            let elem = ElementIndex::Vertex(VertexIndex(vi));
-            elements.push(json!({
-                "modelId": model_id,
-                "elementId": vertex.id(),
-                "visitedCount": ctx.visit_count(elem),
-            }));
-        }
-
-        for ei in 0..model.edges().len() {
-            let edge = model.edge(EdgeIndex(ei));
-            let elem = ElementIndex::Edge(EdgeIndex(ei));
-            elements.push(json!({
-                "modelId": model_id,
-                "elementId": edge.id(),
-                "visitedCount": ctx.visit_count(elem),
-            }));
-        }
-    }
-
+    let elements = state
+        .registry
+        .elements(state.execution_id()?)
+        .map_err(|error| error.to_string())?
+        .into_iter()
+        .map(|element| {
+            json!({
+                "modelId": element.model_id,
+                "elementId": element.element_id,
+                "visitedCount": element.visited_count,
+            })
+        })
+        .collect::<Vec<_>>();
     Ok(json!({"result": "ok", "elements": elements}))
 }
 
 pub fn handle_convert_graphml(graphml: &str) -> Result<Value, String> {
-    let contexts = read_graphml_string(graphml).map_err(|e| e.to_string())?;
-    let json_str = write_json_string(&contexts).map_err(|e| e.to_string())?;
-    Ok(json!({"result": "ok", "models": json_str}))
-}
-
-fn element_name_from_ctx(ctx: &ExecutionContext, element: ElementIndex) -> String {
-    match element {
-        ElementIndex::Vertex(vi) => ctx.model().vertex(vi).name().unwrap_or("").to_string(),
-        ElementIndex::Edge(ei) => ctx.model().edge(ei).name().unwrap_or("").to_string(),
-    }
-}
-
-fn element_id_from_ctx(ctx: &ExecutionContext, element: ElementIndex) -> String {
-    match element {
-        ElementIndex::Vertex(vi) => ctx.model().vertex(vi).id().to_string(),
-        ElementIndex::Edge(ei) => ctx.model().edge(ei).id().to_string(),
-    }
+    let result = convert_graphml(graphml).map_err(|error| error.to_string())?;
+    Ok(json!({"result": "ok", "models": result.model.to_string()}))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn run_to_completion(state: &mut MachineState) -> Vec<String> {
-        let mut path = Vec::new();
-        while handle_has_next(state)
-            .ok()
-            .and_then(|v| v.get("hasNext").and_then(|h| h.as_str()).map(|s| s == "true"))
-            .unwrap_or(false)
-        {
-            let resp = handle_get_next(state, false).unwrap();
-            let id = resp
-                .get("currentElementID")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            path.push(id);
-        }
-        path
-    }
-
-    const SMALL_MODEL_JSON: &str = r#"{
+    const MODEL: &str = r#"{
         "models": [{
             "name": "Small",
             "generator": "random(edge_coverage(100))",
@@ -425,69 +291,57 @@ mod tests {
         }]
     }"#;
 
-    fn fresh_state() -> MachineState {
-        MachineState {
-            machine: None,
-            contexts_snapshot: Vec::new(),
-        }
+    #[test]
+    fn legacy_execution_response_shapes_are_preserved() {
+        let mut state = MachineState::new();
+        let loaded = handle_load(&mut state, MODEL, Some(42), None).unwrap();
+        assert_eq!(loaded, json!({"result": "ok", "seed": 42}));
+
+        let has_next = handle_has_next(&state).unwrap();
+        assert_eq!(has_next, json!({"result": "ok", "hasNext": "true"}));
+
+        let step = handle_get_next(&state, false).unwrap();
+        assert_eq!(step["result"], "ok");
+        assert_eq!(step["currentElementName"], "e_Start");
+        assert_eq!(step["currentElementID"], "e0");
+        assert!(step.get("data").is_none());
+
+        let statistics = handle_get_statistics(&state).unwrap();
+        assert_eq!(statistics["totalNumberOfVertices"], 2);
+        assert_eq!(statistics["totalNumberOfEdges"], 4);
+        assert_eq!(statistics["totalNumberOfVisitedEdges"], 1);
+
+        let returned_model = handle_get_model(&state).unwrap();
+        assert_eq!(returned_model["result"], "ok");
+        assert!(returned_model["models"].as_str().is_some());
     }
 
     #[test]
-    fn load_with_seed_is_deterministic() {
-        let run = |seed: u64| -> Vec<String> {
-            let mut state = fresh_state();
-            handle_load(&mut state, SMALL_MODEL_JSON, Some(seed), None).unwrap();
-            run_to_completion(&mut state)
-        };
+    fn verbose_websocket_step_shape_is_preserved() {
+        let mut state = MachineState::new();
+        handle_load(
+            &mut state,
+            MODEL,
+            Some(42),
+            Some("sessionValue=7".to_string()),
+        )
+        .unwrap();
 
-        assert_eq!(run(42), run(42));
-        assert_eq!(run(123), run(123));
+        let step = handle_get_next(&state, true).unwrap();
+        assert_eq!(step["visitedCount"], 1);
+        assert_eq!(step["totalCount"], 1);
+        assert!(step["stopConditionFulfillment"].is_number());
+        assert!(step["data"].as_str().unwrap().contains("sessionValue=7"));
     }
 
     #[test]
-    fn load_with_different_seeds_diverges() {
-        let run = |seed: u64| -> Vec<String> {
-            let mut state = fresh_state();
-            handle_load(&mut state, SMALL_MODEL_JSON, Some(seed), None).unwrap();
-            run_to_completion(&mut state)
-        };
+    fn failed_load_does_not_replace_the_active_execution() {
+        let mut state = MachineState::new();
+        handle_load(&mut state, MODEL, Some(42), None).unwrap();
+        let execution_id = state.execution_id.clone();
 
-        assert_ne!(run(42), run(99));
-    }
-
-    #[test]
-    fn load_without_seed_returns_generated_seed() {
-        let mut state = fresh_state();
-        let result = handle_load(&mut state, SMALL_MODEL_JSON, None, None).unwrap();
-        let seed = result.get("seed").and_then(|v| v.as_u64());
-        assert!(seed.is_some(), "response must contain generated seed");
-
-        let path = run_to_completion(&mut state);
-        assert!(!path.is_empty());
-    }
-
-    #[test]
-    fn auto_generated_seed_replays_deterministically() {
-        let mut state1 = fresh_state();
-        let resp = handle_load(&mut state1, SMALL_MODEL_JSON, None, None).unwrap();
-        let seed = resp.get("seed").and_then(|v| v.as_u64()).unwrap();
-        let path1 = run_to_completion(&mut state1);
-
-        let mut state2 = fresh_state();
-        handle_load(&mut state2, SMALL_MODEL_JSON, Some(seed), None).unwrap();
-        let path2 = run_to_completion(&mut state2);
-
-        assert_eq!(path1, path2);
-    }
-
-    #[test]
-    fn load_with_global_data_sets_variables() {
-        let mut state = fresh_state();
-        handle_load(&mut state, SMALL_MODEL_JSON, Some(42), Some("x=10;y=20")).unwrap();
-
-        let resp = handle_get_data(&mut state).unwrap();
-        let data = resp.get("data").and_then(|d| d.as_str()).unwrap_or("");
-        assert!(data.contains("x=10"));
-        assert!(data.contains("y=20"));
+        assert!(handle_load(&mut state, r#"{"models": []}"#, Some(1), None).is_err());
+        assert_eq!(state.execution_id, execution_id);
+        assert_eq!(handle_has_next(&state).unwrap()["hasNext"], "true");
     }
 }
