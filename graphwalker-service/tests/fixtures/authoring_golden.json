@@ -1,0 +1,33 @@
+{
+  "models": [
+    {
+      "name": "Golden",
+      "id": "model-golden",
+      "generator": "random(vertex_coverage(100))",
+      "startElementId": "e_start",
+      "vertices": [
+        {
+          "id": "v_a",
+          "name": "v_A"
+        },
+        {
+          "id": "v_b",
+          "name": "v_B"
+        }
+      ],
+      "edges": [
+        {
+          "id": "e_start",
+          "name": "e_Start",
+          "targetVertexId": "v_a"
+        },
+        {
+          "id": "e_ab",
+          "name": "e_AB",
+          "sourceVertexId": "v_a",
+          "targetVertexId": "v_b"
+        }
+      ]
+    }
+  ]
+}
