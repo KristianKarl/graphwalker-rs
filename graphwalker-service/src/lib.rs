@@ -1,6 +1,13 @@
+mod authoring;
 mod execution;
 mod types;
 
+pub use authoring::{
+    AddEdge, AddVertex, CreateModel, DiscardResult, DraftCreated, DraftId, DraftLimits,
+    DraftRegistry, DraftSnapshot, DraftValidation, EdgeResult, ExportedModel, FieldPatch,
+    ModelResult as DraftModelResult, RemoveElement, RemoveResult, UpdateEdge, UpdateModel,
+    UpdateVertex, VertexResult,
+};
 pub use execution::ExecutionRegistry;
 pub use types::{
     ConversionResult, ElementKind, ElementStatus, ExecutionId, ExecutionLimits,

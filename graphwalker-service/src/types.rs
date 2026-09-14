@@ -150,6 +150,19 @@ pub enum ServiceErrorCode {
     ExecutionLimitReached,
     ExecutionNotFound,
     ExecutionUnavailable,
+    DraftLimitReached,
+    DraftNotFound,
+    DraftExpired,
+    DraftUnavailable,
+    ModelLimitReached,
+    RevisionConflict,
+    DuplicateElementId,
+    UnknownVertex,
+    MissingTargetVertex,
+    InvalidWeight,
+    InvalidDependency,
+    InvalidElement,
+    ReferencedElement,
     Internal,
 }
 
@@ -160,7 +173,7 @@ pub struct ServiceError {
 }
 
 impl ServiceError {
-    pub(crate) fn new(code: ServiceErrorCode, message: impl Into<String>) -> Self {
+    pub fn new(code: ServiceErrorCode, message: impl Into<String>) -> Self {
         Self {
             code,
             message: message.into(),

@@ -247,6 +247,17 @@ This phase adds transport-neutral authoring behavior, not REST endpoints or MCP 
 
 Exit criterion: the service can construct and export a model accepted by `graphwalker-io`, and all success, failure, atomicity, revision, and isolation tests pass.
 
+Phase 2 completed on 2026-09-14:
+
+- `DraftRegistry` stores one canonical `graphwalker-io::json::JsonModel` per draft and exposes typed create, add, update, remove, export, validate, snapshot, and discard operations. No MCP tools or REST routes are added in this phase.
+- Draft and generated graph-element IDs use UUID v4 values; draft IDs are opaque and prefixed with `draft_`. Each successful mutation increments the revision, and optional expected revisions prevent stale writes.
+- Draft mutations clone the complete canonical document, validate IDs, endpoint references, numeric ranges, metadata references, and configured resource limits, then commit under a per-draft mutex. Any failed mutation preserves the complete document and revision.
+- Default limits are 64 active drafts, 10,000 vertices and 20,000 edges per draft, and 30 minutes of idle time. Expired-ID tombstones are bounded to 1,024 entries so expiry diagnostics do not create unbounded state.
+- Removing a connected vertex requires `cascade`; removing an element referenced by the start element or predefined path separately requires `cleanup_references`. Update patches explicitly distinguish keep, set, and clear operations.
+- Export and snapshot return a JSON object with the existing GraphWalker field names. Snapshots are immutable values, so an execution started from one cannot be changed by later draft edits.
+- The authoring suite covers minimal and fully populated models, generated and supplied IDs, concurrent uniqueness, revision conflicts, draft isolation, every configured limit boundary, expiry, discard, update/clear behavior, cascading removal, validation, export stability, `graphwalker-io` round trips, execution snapshots, stable errors, and complete-state atomicity after failures.
+- A checked-in golden fixture builds two vertices, a source-less start edge, and a normal edge, then exports, validates, snapshots, and executes the model to completion.
+
 ### Phase 3: Implement the MCP adapter
 
 1. Add `graphwalker-mcp` and advertise only the implemented capabilities.
@@ -380,9 +391,9 @@ The MCP work is ready for an initial release when:
 
 New REST graph-construction endpoints are not part of these MCP acceptance criteria. They are accepted and released independently under Phase 4; only preservation of the existing REST/WebSocket contracts gates the MCP release.
 
-## Open questions to resolve during Phase 0
+## Open questions for later phases
 
-1. What default limits are appropriate for model size, active drafts/executions, idle lifetime, and step count?
+1. Should MCP add a per-call step budget beyond the Phase 1 and Phase 2 registry and model-size limits?
 2. Should `set_execution_data` remain available in the first release, given that it evaluates GraphWalker/Rhai expressions, or should the MVP initially expose traversal as read-only?
 3. Which MCP clients and operating systems are release targets for the first interoperability matrix?
 4. Should multi-model draft authoring and shared-state composition be part of the MVP, or follow the initial single-graph implementation?
