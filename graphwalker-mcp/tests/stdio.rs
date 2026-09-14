@@ -199,6 +199,21 @@ fn stdio_lists_stable_schema_backed_tools_and_health() {
     assert_eq!(remove["annotations"]["destructiveHint"], true);
     assert_eq!(remove["annotations"]["readOnlyHint"], false);
 
+    for (tool_name, schema_path) in [
+        ("convert_graphml", "/outputSchema/properties/model"),
+        ("export_model", "/outputSchema/properties/model"),
+        ("start_execution", "/inputSchema/properties/model"),
+        ("update_model", "/outputSchema/properties/model"),
+        ("validate_model", "/inputSchema/properties/model"),
+    ] {
+        let tool = tools.iter().find(|tool| tool["name"] == tool_name).unwrap();
+        let model_schema = tool.pointer(schema_path).unwrap();
+        assert!(
+            model_schema.is_object(),
+            "{tool_name} must advertise an object schema instead of a bare true schema"
+        );
+    }
+
     let health = client.call("health", json!({}));
     assert_eq!(health["status"], "ok");
     assert_eq!(health["server_version"], env!("CARGO_PKG_VERSION"));

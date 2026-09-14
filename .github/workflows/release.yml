@@ -1,0 +1,105 @@
+name: Release binaries
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build-mcp:
+    name: Build MCP (${{ matrix.archive_name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            archive_name: linux-x86_64
+            binary_name: graphwalker-mcp
+          - os: macos-15
+            archive_name: macos-arm64
+            binary_name: graphwalker-mcp
+          - os: windows-2025
+            archive_name: windows-x86_64
+            binary_name: graphwalker-mcp.exe
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Install Rust 1.88
+        shell: bash
+        run: rustup toolchain install 1.88.0 --profile minimal
+
+      - name: Build graphwalker-mcp
+        shell: bash
+        run: cargo +1.88.0 build --release --locked -p graphwalker-mcp
+
+      - name: Package Unix binary
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          ARCHIVE_NAME: ${{ matrix.archive_name }}
+          BINARY_NAME: ${{ matrix.binary_name }}
+        run: |
+          package="graphwalker-mcp-${GITHUB_REF_NAME}-${ARCHIVE_NAME}"
+          mkdir staging
+          cp "target/release/${BINARY_NAME}" README.md LICENSE staging/
+          tar -czf "${package}.tar.gz" -C staging "${BINARY_NAME}" README.md LICENSE
+          shasum -a 256 "${package}.tar.gz" > "${package}.tar.gz.sha256"
+
+      - name: Package Windows binary
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ARCHIVE_NAME: ${{ matrix.archive_name }}
+          BINARY_NAME: ${{ matrix.binary_name }}
+        run: |
+          $package = "graphwalker-mcp-$env:GITHUB_REF_NAME-$env:ARCHIVE_NAME"
+          New-Item -ItemType Directory -Path staging
+          Copy-Item "target/release/$env:BINARY_NAME", README.md, LICENSE -Destination staging
+          Compress-Archive -Path staging/* -DestinationPath "$package.zip"
+          $hash = (Get-FileHash "$package.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $package.zip" | Set-Content -NoNewline "$package.zip.sha256"
+
+      - name: Upload packaged binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: graphwalker-mcp-${{ matrix.archive_name }}
+          path: |
+            graphwalker-mcp-*.tar.gz
+            graphwalker-mcp-*.tar.gz.sha256
+            graphwalker-mcp-*.zip
+            graphwalker-mcp-*.zip.sha256
+          if-no-files-found: error
+
+  github-release:
+    name: Publish GitHub release
+    needs: build-mcp
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download packaged binaries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: graphwalker-mcp-*
+          path: dist
+          merge-multiple: true
+
+      - name: Create release and upload binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          mapfile -t assets < <(find dist -type f -print | sort)
+          if [[ "${#assets[@]}" -eq 0 ]]; then
+            echo "No release assets were downloaded" >&2
+            exit 1
+          fi
+          gh release create "${GITHUB_REF_NAME}" "${assets[@]}" --generate-notes --verify-tag
