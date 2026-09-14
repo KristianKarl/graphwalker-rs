@@ -225,6 +225,16 @@ This phase is an internal refactor and contains no new REST features.
 
 Exit criterion: all existing REST, WebSocket, CLI, and core tests pass unchanged, and service-level tests cover deterministic restart and isolated concurrent executions.
 
+Phase 1 completed on 2026-09-14:
+
+- `graphwalker-service` is a transport-neutral workspace crate with typed model, validation, conversion, step, status, statistics, element-status, restart, data, identifier, limit, and error results.
+- `ExecutionRegistry` issues opaque random 128-bit execution IDs and defaults to at most 64 active executions. Callers can supply a different limit through `ExecutionLimits`.
+- Each execution owns a worker thread because the GraphWalker machine intentionally contains thread-local state. A channel serializes calls to one execution, while separate workers let independent executions advance concurrently.
+- Restart rebuilds the machine with its original model snapshot, effective seed, and global-data initialization. Data supplied later through `set_data` is intentionally transient.
+- The existing REST and WebSocket actor now maps typed service results back to the established wire formats. No routes, commands, or documented payload shapes were added or changed.
+- Service tests cover deterministic restart, generated-seed replay, preserved global data, same-execution serialization, isolated concurrent executions, registry limits and cleanup, stable typed errors, validation, GraphML conversion, statistics, model export, and element status. Adapter regression tests cover the legacy REST/WebSocket response conventions.
+- The complete workspace test suite, including all existing CLI, REST, WebSocket, core, Studio, and MCP tests, passes with Rust 1.88.0.
+
 ### Phase 2: Implement and test graph construction in the service
 
 This phase adds transport-neutral authoring behavior, not REST endpoints or MCP protocol wiring.

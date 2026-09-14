@@ -9,6 +9,7 @@ members = [
     "graphwalker-restful",
     "graphwalker-studio",
     "graphwalker-mcp",
+    "graphwalker-service",
 ]
 
 [workspace.package]

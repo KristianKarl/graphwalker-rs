@@ -727,6 +727,17 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "futures",
+ "graphwalker-service",
+ "serde_json",
+ "tokio",
+ "tower-http",
+ "tracing",
+]
+
+[[package]]
+name = "graphwalker-service"
+version = "0.1.0"
+dependencies = [
  "graphwalker-core",
  "graphwalker-dsl",
  "graphwalker-io",
@@ -734,9 +745,6 @@ dependencies = [
  "rand 0.8.6",
  "serde",
  "serde_json",
- "tokio",
- "tower-http",
- "tracing",
 ]
 
 [[package]]
