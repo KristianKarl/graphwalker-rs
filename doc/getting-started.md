@@ -224,9 +224,43 @@ Open [http://localhost:9090](http://localhost:9090) in your browser. You can:
 
 See [GraphWalker Studio](studio) for the full guide.
 
+## Use the MCP server
+
+The `graphwalker-mcp` binary lets an MCP client author, validate, export, and execute GraphWalker models through structured tool calls. Build it with:
+
+```bash
+cargo build --release --locked -p graphwalker-mcp
+```
+
+Configure your MCP client to launch the resulting binary over stdio:
+
+```json
+{
+  "mcpServers": {
+    "graphwalker": {
+      "command": "/absolute/path/to/graphwalker-rs/target/release/graphwalker-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+The usual MCP workflow is:
+
+1. Create or supply a model and validate it.
+2. Export authored drafts that must survive a server restart.
+3. Start an execution with a fixed seed when reproducibility matters.
+4. Repeatedly request one step, perform edges as actions, and verify vertices as observable states.
+5. Inspect final coverage and close the execution.
+
+The MCP server chooses model elements but does not drive the system under test. Your MCP client or test adapter must perform browser, API, or application actions and stop when behavior differs from the model.
+
+See the [MCP Server](mcp-server) guide for installation options, MCP Inspector setup, complete authoring and execution examples, lifecycle details, and troubleshooting.
+
 ## Next steps
 
 - [Generators](generators) &mdash; learn about all the path generation algorithms
 - [Stop Conditions](stop-conditions) &mdash; understand when and how traversal stops
 - [JSON Model Format](json-format) &mdash; full specification for model files
 - [CLI Reference](cli) &mdash; all commands, flags, and options
+- [MCP Server](mcp-server) &mdash; author models and coordinate test executions from an MCP client

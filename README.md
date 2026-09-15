@@ -71,6 +71,8 @@ graphwalker-mcp
 
 Install only the MCP server from a checkout with `cargo install --locked --path graphwalker-mcp`, then configure an MCP client to launch `graphwalker-mcp` over stdio. See the [MCP Server guide](https://graphwalker.github.io/graphwalker-rs/mcp-server) for client configuration and a complete model-authoring workflow.
 
+The MCP server selects one model element at a time; the MCP client or its test adapter performs edge actions and verifies vertex states in the system under test. Drafts and executions are process-local, so export canonical JSON before disconnecting when a model must persist.
+
 ## Documentation
 
 Full documentation is available at [graphwalker.github.io/graphwalker-rs](https://graphwalker.github.io/graphwalker-rs/).
