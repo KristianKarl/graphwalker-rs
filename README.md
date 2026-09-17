@@ -86,7 +86,47 @@ Full documentation is available at [graphwalker.github.io/graphwalker-rs](https:
 - [WebSocket API](https://graphwalker.github.io/graphwalker-rs/websocket-api)
 - [GraphWalker Studio](https://graphwalker.github.io/graphwalker-rs/studio)
 - [MCP Server](https://graphwalker.github.io/graphwalker-rs/mcp-server)
-- [MCP Implementation Plan](https://graphwalker.github.io/graphwalker-rs/mcp)
+
+### Viewing documentation locally
+
+The documentation site is built with Jekyll. To run it with Docker from the repository root:
+
+```bash
+docker run --rm -it \
+  --user "$(id -u):$(id -g)" \
+  -e HOME=/tmp \
+  -p 4000:4000 \
+  -v "$PWD:/workspace" \
+  -w /workspace/doc \
+  ruby:3.3-bookworm \
+  sh -lc 'bundle config set --local path vendor/bundle && bundle install && bundle exec jekyll serve --host 0.0.0.0 --baseurl ""'
+```
+
+Without Docker, install Ruby and Bundler first. On Ubuntu or Debian:
+
+```bash
+sudo apt update
+sudo apt install ruby-full build-essential zlib1g-dev
+
+echo 'export GEM_HOME="$HOME/gems"' >> ~/.bashrc
+echo 'export PATH="$HOME/gems/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+gem install bundler
+```
+
+On macOS, install Ruby with `brew install ruby`, add Homebrew's Ruby to your `PATH`, and install Bundler with `gem install bundler`.
+
+Then run the site from the repository root:
+
+```bash
+cd doc
+bundle config set --local path vendor/bundle
+bundle install
+bundle exec jekyll serve --baseurl ""
+```
+
+Open [http://localhost:4000](http://localhost:4000) in a browser. Jekyll rebuilds the site when documentation files change; stop the server with `Ctrl+C`.
 
 ## License
 
