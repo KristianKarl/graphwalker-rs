@@ -1,5 +1,5 @@
 [package]
-name = "graphwalker-cli"
+name = "graphwalker"
 version = "1.0.0"
 edition = "2021"
 rust-version.workspace = true
