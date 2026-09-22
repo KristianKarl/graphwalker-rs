@@ -1,9 +1,10 @@
 [package]
 name = "graphwalker-studio"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 rust-version.workspace = true
 license = "MIT"
+readme = "../README.md"
 description = "Web-based visual model editor and test runner for GraphWalker"
 repository.workspace = true
 homepage.workspace = true
@@ -16,7 +17,7 @@ name = "graphwalker-studio"
 path = "src/main.rs"
 
 [dependencies]
-graphwalker-restful = { version = "1.0.0", path = "../graphwalker-restful" }
+graphwalker-restful = { version = "1.0.1", path = "../graphwalker-restful" }
 axum = { version = "0.8", features = ["ws"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "signal"] }
 tower-http = { version = "0.6", features = ["fs"] }
