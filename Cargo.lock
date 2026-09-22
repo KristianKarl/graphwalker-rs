@@ -652,7 +652,7 @@ dependencies = [
 
 [[package]]
 name = "graphwalker"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -674,7 +674,7 @@ dependencies = [
 
 [[package]]
 name = "graphwalker-core"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "rand 0.8.6",
  "rhai",
@@ -685,14 +685,14 @@ dependencies = [
 
 [[package]]
 name = "graphwalker-dsl"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "graphwalker-core",
 ]
 
 [[package]]
 name = "graphwalker-io"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "graphwalker-core",
  "graphwalker-dsl",
@@ -703,7 +703,7 @@ dependencies = [
 
 [[package]]
 name = "graphwalker-mcp"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "graphwalker-io",
  "graphwalker-service",
@@ -715,7 +715,7 @@ dependencies = [
 
 [[package]]
 name = "graphwalker-model-checker"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "graphwalker-core",
  "graphwalker-dsl",
@@ -725,7 +725,7 @@ dependencies = [
 
 [[package]]
 name = "graphwalker-restful"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "axum",
  "futures",
@@ -741,7 +741,7 @@ dependencies = [
 
 [[package]]
 name = "graphwalker-service"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "graphwalker-core",
  "graphwalker-dsl",
@@ -755,7 +755,7 @@ dependencies = [
 
 [[package]]
 name = "graphwalker-studio"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "axum",
  "clap",
