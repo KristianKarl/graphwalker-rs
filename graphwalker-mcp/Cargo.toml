@@ -5,6 +5,11 @@ edition = "2021"
 rust-version.workspace = true
 description = "Model Context Protocol server for GraphWalker"
 license = "MIT"
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords = ["graphwalker", "mcp", "model-based-testing"]
+categories = ["development-tools::testing"]
 
 [[bin]]
 name = "graphwalker-mcp"

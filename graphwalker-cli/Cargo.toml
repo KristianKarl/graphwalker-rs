@@ -4,6 +4,12 @@ version = "1.0.0"
 edition = "2021"
 rust-version.workspace = true
 license = "MIT"
+description = "Command-line model-based testing tool for GraphWalker"
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords = ["graphwalker", "model-based-testing", "testing"]
+categories = ["command-line-utilities", "development-tools::testing"]
 
 [[bin]]
 name = "graphwalker"

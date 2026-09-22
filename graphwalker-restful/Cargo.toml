@@ -4,6 +4,12 @@ version = "1.0.0"
 edition = "2021"
 rust-version.workspace = true
 license = "MIT"
+description = "REST and WebSocket API for GraphWalker model-based testing"
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords = ["graphwalker", "model-based-testing", "rest", "websocket"]
+categories = ["development-tools::testing", "web-programming::http-server"]
 
 [dependencies]
 graphwalker-io = { path = "../graphwalker-io" }

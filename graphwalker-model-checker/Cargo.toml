@@ -4,6 +4,12 @@ version = "1.0.0"
 edition = "2021"
 rust-version.workspace = true
 license = "MIT"
+description = "Model validation and checking for GraphWalker model-based testing"
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords = ["graphwalker", "model-based-testing", "model-checking"]
+categories = ["development-tools::testing"]
 
 [dependencies]
 graphwalker-core = { path = "../graphwalker-core" }
