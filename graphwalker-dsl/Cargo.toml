@@ -12,4 +12,4 @@ keywords = ["graphwalker", "model-based-testing", "parser"]
 categories = ["parser-implementations"]
 
 [dependencies]
-graphwalker-core = { path = "../graphwalker-core" }
+graphwalker-core = { version = "1.0.0", path = "../graphwalker-core" }

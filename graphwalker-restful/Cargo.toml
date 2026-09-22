@@ -12,8 +12,8 @@ keywords = ["graphwalker", "model-based-testing", "rest", "websocket"]
 categories = ["development-tools::testing", "web-programming::http-server"]
 
 [dependencies]
-graphwalker-io = { path = "../graphwalker-io" }
-graphwalker-service = { path = "../graphwalker-service" }
+graphwalker-io = { version = "1.0.0", path = "../graphwalker-io" }
+graphwalker-service = { version = "1.0.0", path = "../graphwalker-service" }
 axum = { version = "0.8", features = ["ws"] }
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "signal"] }
