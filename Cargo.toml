@@ -14,3 +14,6 @@ members = [
 
 [workspace.package]
 rust-version = "1.88"
+repository = "https://github.com/GraphWalker/graphwalker-rs"
+homepage = "https://graphwalker.github.io/graphwalker-rs/"
+documentation = "https://graphwalker.github.io/graphwalker-rs/"
