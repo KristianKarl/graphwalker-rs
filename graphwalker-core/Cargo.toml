@@ -1,10 +1,11 @@
 [package]
 name = "graphwalker-core"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 rust-version.workspace = true
 description = "Core domain model and execution engine for GraphWalker model-based testing"
 license = "MIT"
+readme = "../README.md"
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true

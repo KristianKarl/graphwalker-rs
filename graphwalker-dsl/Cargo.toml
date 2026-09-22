@@ -1,10 +1,11 @@
 [package]
 name = "graphwalker-dsl"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 rust-version.workspace = true
 description = "DSL parsers for GraphWalker generator expressions and yEd model labels"
 license = "MIT"
+readme = "../README.md"
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
@@ -12,4 +13,4 @@ keywords = ["graphwalker", "model-based-testing", "parser"]
 categories = ["parser-implementations"]
 
 [dependencies]
-graphwalker-core = { version = "1.0.0", path = "../graphwalker-core" }
+graphwalker-core = { version = "1.0.1", path = "../graphwalker-core" }
