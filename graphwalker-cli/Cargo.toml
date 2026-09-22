@@ -1,20 +1,26 @@
 [package]
-name = "graphwalker-cli"
+name = "graphwalker"
 version = "1.0.0"
 edition = "2021"
 rust-version.workspace = true
 license = "MIT"
+description = "Command-line model-based testing tool for GraphWalker"
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords = ["graphwalker", "model-based-testing", "testing"]
+categories = ["command-line-utilities", "development-tools::testing"]
 
 [[bin]]
 name = "graphwalker"
 path = "src/main.rs"
 
 [dependencies]
-graphwalker-core = { path = "../graphwalker-core" }
-graphwalker-dsl = { path = "../graphwalker-dsl" }
-graphwalker-io = { path = "../graphwalker-io" }
-graphwalker-model-checker = { path = "../graphwalker-model-checker" }
-graphwalker-restful = { path = "../graphwalker-restful" }
+graphwalker-core = { version = "1.0.0", path = "../graphwalker-core" }
+graphwalker-dsl = { version = "1.0.0", path = "../graphwalker-dsl" }
+graphwalker-io = { version = "1.0.0", path = "../graphwalker-io" }
+graphwalker-model-checker = { version = "1.0.0", path = "../graphwalker-model-checker" }
+graphwalker-restful = { version = "1.0.0", path = "../graphwalker-restful" }
 rand = "0.8"
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }

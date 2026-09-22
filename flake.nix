@@ -49,7 +49,7 @@
             echo "  Useful commands:"
             echo "    cargo build           - Build the Rust workspace"
             echo "    cargo test            - Run all tests"
-            echo "    cargo run -p graphwalker-cli -- --help  - Run the CLI"
+            echo "    cargo run -p graphwalker -- --help      - Run the CLI"
             echo "=========================================================="
           '';
         };

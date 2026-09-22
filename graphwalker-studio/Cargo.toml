@@ -4,13 +4,19 @@ version = "1.0.0"
 edition = "2021"
 rust-version.workspace = true
 license = "MIT"
+description = "Web-based visual model editor and test runner for GraphWalker"
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords = ["graphwalker", "model-based-testing", "testing"]
+categories = ["development-tools::testing"]
 
 [[bin]]
 name = "graphwalker-studio"
 path = "src/main.rs"
 
 [dependencies]
-graphwalker-restful = { path = "../graphwalker-restful" }
+graphwalker-restful = { version = "1.0.0", path = "../graphwalker-restful" }
 axum = { version = "0.8", features = ["ws"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "signal"] }
 tower-http = { version = "0.6", features = ["fs"] }

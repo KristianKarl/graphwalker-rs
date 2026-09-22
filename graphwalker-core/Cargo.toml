@@ -5,6 +5,11 @@ edition = "2021"
 rust-version.workspace = true
 description = "Core domain model and execution engine for GraphWalker model-based testing"
 license = "MIT"
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords = ["graphwalker", "model-based-testing", "testing"]
+categories = ["development-tools::testing"]
 
 [dependencies]
 uuid = { version = "1", features = ["v4"] }
