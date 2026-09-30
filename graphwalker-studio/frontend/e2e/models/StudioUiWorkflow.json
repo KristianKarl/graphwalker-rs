@@ -1,0 +1,142 @@
+{
+  "seed": 5,
+  "models": [
+    {
+      "name": "Create and Edit Multi-Model Test",
+      "generator": "random(edge_coverage(100))",
+      "startElementId": "e_openStudio",
+      "vertices": [
+        {
+          "id": "v_ready",
+          "name": "v_Ready",
+          "actions": ["global.edited = false"]
+        },
+        { "id": "v_first_model", "name": "v_FirstModel" },
+        { "id": "v_first_graph", "name": "v_FirstGraph" },
+        { "id": "v_first_edited", "name": "v_FirstEdited" },
+        { "id": "v_two_models", "name": "v_TwoModels" },
+        { "id": "v_test_element_deleted", "name": "v_TestElementDeleted" }
+      ],
+      "edges": [
+        {
+          "id": "e_openStudio",
+          "name": "e_openStudio",
+          "targetVertexId": "v_ready"
+        },
+        {
+          "id": "e_createFirstModel",
+          "name": "e_createFirstModel",
+          "sourceVertexId": "v_ready",
+          "targetVertexId": "v_first_model"
+        },
+        {
+          "id": "e_renameFirstModel",
+          "name": "e_renameFirstModel",
+          "sourceVertexId": "v_first_graph",
+          "targetVertexId": "v_first_graph"
+        },
+        {
+          "id": "e_buildFirstGraph",
+          "name": "e_buildFirstGraph",
+          "sourceVertexId": "v_first_model",
+          "targetVertexId": "v_first_graph"
+        },
+        {
+          "id": "e_editFirstModel",
+          "name": "e_editFirstModel",
+          "sourceVertexId": "v_first_graph",
+          "targetVertexId": "v_first_edited",
+          "actions": ["global.edited = true"]
+        },
+        {
+          "id": "e_finishEditingFirstModel",
+          "name": "e_finishEditingFirstModel",
+          "sourceVertexId": "v_first_edited",
+          "targetVertexId": "v_first_graph"
+        },
+        {
+          "id": "e_createSecondModel",
+          "name": "e_createSecondModel",
+          "sourceVertexId": "v_first_edited",
+          "targetVertexId": "v_two_models",
+          "guard": "global.edited == true"
+        },
+        {
+          "id": "e_switchModels",
+          "name": "e_switchModels",
+          "sourceVertexId": "v_two_models",
+          "targetVertexId": "v_two_models"
+        },
+        {
+          "id": "e_runModels",
+          "name": "e_runModels",
+          "sourceVertexId": "v_two_models",
+          "targetVertexId": "v_two_models"
+        },
+        {
+          "id": "e_editSecondModel",
+          "name": "e_editSecondModel",
+          "sourceVertexId": "v_two_models",
+          "targetVertexId": "v_two_models"
+        },
+        {
+          "id": "e_stepSecondModel",
+          "name": "e_stepSecondModel",
+          "sourceVertexId": "v_two_models",
+          "targetVertexId": "v_two_models"
+        },
+        {
+          "id": "e_deleteElement",
+          "name": "e_deleteElement",
+          "sourceVertexId": "v_two_models",
+          "targetVertexId": "v_test_element_deleted"
+        },
+        {
+          "id": "e_closeSecondModel",
+          "name": "e_closeSecondModel",
+          "sourceVertexId": "v_test_element_deleted",
+          "targetVertexId": "v_first_graph"
+        },
+        {
+          "id": "e_closeAllModels",
+          "name": "e_closeAllModels",
+          "sourceVertexId": "v_first_graph",
+          "targetVertexId": "v_ready"
+        }
+      ]
+    },
+    {
+      "name": "Refund Flow",
+      "generator": "random(edge_coverage(100))",
+      "startElementId": "refund_v_requested",
+      "vertices": [
+        { "id": "refund_v_requested", "name": "v_RefundRequested" },
+        { "id": "refund_v_approved", "name": "v_RefundApproved" },
+        { "id": "refund_v_issued", "name": "v_RefundIssued" }
+      ],
+      "edges": [
+        {
+          "id": "refund_e_approve",
+          "name": "e_ApproveRefund",
+          "sourceVertexId": "refund_v_requested",
+          "targetVertexId": "refund_v_approved",
+          "actions": ["global.counter = 0", "global.counter++"]
+        },
+        {
+          "id": "refund_e_issue",
+          "name": "e_IssueRefund",
+          "sourceVertexId": "refund_v_approved",
+          "targetVertexId": "refund_v_issued",
+          "actions": ["global.counter++"]
+        },
+        {
+          "id": "refund_e_return",
+          "name": "e_ReturnToRequested",
+          "sourceVertexId": "refund_v_issued",
+          "targetVertexId": "refund_v_requested",
+          "actions": ["global.counter++"]
+        }
+      ]
+    }
+  ]
+}

@@ -7,6 +7,34 @@ Currently, two official plugins are available:
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
+## Studio UI E2E Test
+
+From this directory, install the Playwright browser once, then run the test:
+
+```bash
+npm install
+npx playwright install chromium
+npm run test:e2e
+```
+
+The E2E script builds the frontend and the `graphwalker` and
+`graphwalker-studio` binaries before launching Playwright against the real
+Studio process. To watch the test in a visible browser window, run:
+
+```bash
+npm run test:e2e -- --headed
+```
+
+If the downloaded Playwright browser cannot start because system libraries
+are unavailable, point Playwright at an installed Chromium executable:
+
+```bash
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(command -v chromium)" npm run test:e2e
+```
+
+The reviewable workflow and Refund Flow reference models are in
+`e2e/models/StudioUiWorkflow.json`.
+
 ## React Compiler
 
 The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).

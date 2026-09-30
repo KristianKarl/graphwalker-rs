@@ -482,6 +482,9 @@ export default function App() {
               models.map((m, i) => (
                 <div
                   key={m.id}
+                  id={`model-panel-${m.id}`}
+                  role="tabpanel"
+                  aria-labelledby={`model-tab-${m.id}`}
                   className="absolute inset-0"
                   style={{ visibility: i === selectedModelIndex ? 'visible' : 'hidden' }}
                 >
