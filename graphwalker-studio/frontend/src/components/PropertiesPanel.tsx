@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useModelStore } from '@/store/model-store';
 import { useExecutionStore } from '@/store/execution-store';
 import { useEditorStore } from '@/store/editor-store';
@@ -5,12 +6,12 @@ import type { GWModel } from '@/store/types';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="border-b border-border">
-      <div className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider bg-surface-alt">
+    <section aria-label={title} className="border-b border-border">
+      <h2 className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider bg-surface-alt">
         {title}
-      </div>
+      </h2>
       <div className="p-4 space-y-3">{children}</div>
-    </div>
+    </section>
   );
 }
 
@@ -27,6 +28,7 @@ function Field({
   disabled?: boolean;
   multiline?: boolean;
 }) {
+  const id = useId();
   const cls = `
     w-full bg-surface-alt border border-border rounded-md px-3 py-1.5
     text-sm text-text focus:outline-none focus:border-primary
@@ -35,9 +37,10 @@ function Field({
   `;
   return (
     <div>
-      <label className="block text-xs text-text-muted mb-1">{label}</label>
+      <label htmlFor={id} className="block text-xs text-text-muted mb-1">{label}</label>
       {multiline ? (
         <textarea
+          id={id}
           className={`${cls} resize-y min-h-[60px]`}
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -46,6 +49,7 @@ function Field({
         />
       ) : (
         <input
+          id={id}
           className={cls}
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -91,7 +95,7 @@ export default function PropertiesPanel() {
       <Section title="Global">
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs text-text-muted">Seed</label>
+            <label htmlFor="studio-seed" className="text-xs text-text-muted">Seed</label>
             <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -103,6 +107,7 @@ export default function PropertiesPanel() {
             </label>
           </div>
           <input
+            id="studio-seed"
             className={`
               w-full bg-surface-alt border rounded-md px-3 py-1.5
               text-sm text-text focus:outline-none focus:border-primary
@@ -134,14 +139,16 @@ export default function PropertiesPanel() {
           onChange={(v) => updateModel(selectedModelIndex, { generator: v })}
         />
         <div>
-          <label className="block text-xs text-text-muted mb-1">
+          <label htmlFor="studio-step-delay" className="block text-xs text-text-muted mb-1">
             Step delay: {delay}ms
           </label>
           <input
+            id="studio-step-delay"
             type="range"
             min={0}
             max={500}
             step={10}
+            aria-label="Step delay"
             value={delay}
             onChange={(e) => setDelay(Number(e.target.value))}
             className="w-full accent-primary"

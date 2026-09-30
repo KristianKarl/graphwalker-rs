@@ -497,7 +497,13 @@ export default function GraphEditor({ model, modelIndex }: Props) {
   const allUnvisited = allTotal - allVisitedCount;
 
   return (
-    <div className="w-full h-full relative" style={{ background: themeColors.bg }}>
+    <div
+      role="application"
+      aria-label={`Graph editor for ${model.name}`}
+      tabIndex={0}
+      className="w-full h-full relative"
+      style={{ background: themeColors.bg }}
+    >
       <div ref={containerRef} className="w-full h-full" />
       {model.vertices.length === 0 && (
         <div

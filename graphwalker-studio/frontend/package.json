@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:e2e": "npm run build -- --outDir e2e/.build",
+    "test:e2e": "npm run build:e2e && cargo build --manifest-path ../../Cargo.toml -p graphwalker -p graphwalker-studio && playwright test --config=e2e/playwright.config.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
