@@ -32,11 +32,45 @@ pub fn run(args: Args) -> CliResult {
         Some(args.seed)
     };
 
+    let initial_model = if args.model.is_empty() {
+        None
+    } else {
+        let mut contexts = super::load_models(&args.model)?;
+        if let Some(start_name) = &args.start_element {
+            set_start_by_name(&mut contexts, start_name)?;
+        }
+        Some(graphwalker_io::json::write_json_string(&contexts)?)
+    };
+
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         match args.service.to_uppercase().as_str() {
-            "RESTFUL" => graphwalker_restful::start_rest_server(args.port, seed).await,
+            "RESTFUL" => {
+                graphwalker_restful::start_rest_server_with_model(args.port, seed, initial_model)
+                    .await
+            }
             _ => graphwalker_restful::start_websocket_server(args.port).await,
         }
     })
+}
+
+fn set_start_by_name(
+    contexts: &mut [graphwalker_io::ModelContext],
+    name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    for context in contexts.iter_mut() {
+        let elements = context.model.find_elements(name);
+        if !elements.is_empty() {
+            context.start_element_id = Some(match elements[0] {
+                graphwalker_core::model::ElementIndex::Vertex(vertex_index) => {
+                    context.model.vertex(vertex_index).id().to_string()
+                }
+                graphwalker_core::model::ElementIndex::Edge(edge_index) => {
+                    context.model.edge(edge_index).id().to_string()
+                }
+            });
+            return Ok(());
+        }
+    }
+    Err(format!("Start element '{}' not found", name).into())
 }

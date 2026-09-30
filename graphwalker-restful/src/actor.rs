@@ -77,9 +77,21 @@ impl MachineState {
 }
 
 pub fn spawn_machine_thread() -> mpsc::Sender<Command> {
+    spawn_machine_thread_with_state(MachineState::new())
+}
+
+pub fn spawn_machine_thread_with_model(
+    json_body: String,
+    seed: Option<u64>,
+) -> Result<mpsc::Sender<Command>, String> {
+    let mut state = MachineState::new();
+    handle_load(&mut state, &json_body, seed, None)?;
+    Ok(spawn_machine_thread_with_state(state))
+}
+
+fn spawn_machine_thread_with_state(mut state: MachineState) -> mpsc::Sender<Command> {
     let (tx, rx) = mpsc::channel::<Command>();
     std::thread::spawn(move || {
-        let mut state = MachineState::new();
         while let Ok(command) = rx.recv() {
             match command {
                 Command::Load {

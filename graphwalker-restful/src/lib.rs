@@ -41,6 +41,32 @@ pub async fn start_rest_server(
     seed: Option<u64>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let app = rest_router(seed);
+    serve_rest(port, app).await
+}
+
+pub async fn start_rest_server_with_model(
+    port: u16,
+    seed: Option<u64>,
+    initial_model: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let app = match initial_model {
+        Some(json_body) => {
+            let machine_tx = crate::actor::spawn_machine_thread_with_model(json_body, seed)
+                .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidInput, error))?;
+            build_rest_router(RestApplicationState {
+                execution: rest::RestState {
+                    machine_tx,
+                    default_seed: seed,
+                },
+                drafts: graphwalker_service::DraftRegistry::default(),
+            })
+        }
+        None => rest_router(seed),
+    };
+    serve_rest(port, app).await
+}
+
+async fn serve_rest(port: u16, app: Router) -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     eprintln!("GraphWalker REST server listening on http://{}", addr);
 
