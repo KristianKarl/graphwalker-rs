@@ -23,10 +23,21 @@ fn help_shows_usage() {
 
 #[test]
 fn version_shows_version() {
-    gw().arg("--version")
+    let output = gw()
+        .arg("--version")
         .assert()
         .success()
-        .stdout(predicate::str::contains("graphwalker"));
+        .get_output()
+        .stdout
+        .clone();
+    let output = String::from_utf8(output).unwrap();
+    let prefix = format!("graphwalker {} (git ", env!("CARGO_PKG_VERSION"));
+    let git_id = output
+        .trim()
+        .strip_prefix(&prefix)
+        .and_then(|version| version.strip_suffix(')'))
+        .expect("version output should include the package version and Git ID");
+    assert!(!git_id.is_empty());
 }
 
 // ---------------------------------------------------------------------------

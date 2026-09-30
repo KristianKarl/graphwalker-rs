@@ -17,6 +17,7 @@ static EMBEDDED_STATIC: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static");
 #[derive(Parser)]
 #[command(
     name = "graphwalker-studio",
+    version = concat!(env!("CARGO_PKG_VERSION"), " (git ", env!("GRAPHWALKER_GIT_ID"), ")"),
     about = "GraphWalker Studio – visual model editor"
 )]
 struct Args {
