@@ -5,7 +5,11 @@ use std::process;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "graphwalker", version, about = "Model-based testing tool")]
+#[command(
+    name = "graphwalker",
+    version = concat!(env!("CARGO_PKG_VERSION"), " (git ", env!("GRAPHWALKER_GIT_ID"), ")"),
+    about = "Model-based testing tool"
+)]
 struct Cli {
     /// Enable debug logging
     #[arg(long, global = true)]

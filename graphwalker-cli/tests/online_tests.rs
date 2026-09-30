@@ -156,6 +156,29 @@ async fn rest_load_has_next_get_next() {
 }
 
 #[tokio::test]
+async fn rest_online_model_is_loaded_at_startup() {
+    let port = 19107;
+    let model_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../graphwalker-io/tests/fixtures/json/SmallModel.json");
+    let model_path = model_path.to_str().unwrap();
+    let _server = ServerGuard::with_args(
+        "RESTFUL",
+        port,
+        &["-m", model_path, "random(edge_coverage(100))"],
+    );
+    wait_for_port(port).await;
+
+    let resp: Value = reqwest::get(format!("http://127.0.0.1:{}/graphwalker/hasNext", port))
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(resp["result"], "ok");
+    assert_eq!(resp["hasNext"], "true");
+}
+
+#[tokio::test]
 async fn rest_get_next_without_load_fails() {
     let port = 19101;
     let _server = ServerGuard::new("RESTFUL", port);

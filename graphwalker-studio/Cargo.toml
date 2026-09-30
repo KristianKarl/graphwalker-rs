@@ -1,6 +1,6 @@
 [package]
 name = "graphwalker-studio"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2021"
 rust-version.workspace = true
 license = "MIT"
@@ -11,13 +11,14 @@ homepage.workspace = true
 documentation.workspace = true
 keywords = ["graphwalker", "model-based-testing", "testing"]
 categories = ["development-tools::testing"]
+build = "build.rs"
 
 [[bin]]
 name = "graphwalker-studio"
 path = "src/main.rs"
 
 [dependencies]
-graphwalker-restful = { version = "1.0.1", path = "../graphwalker-restful" }
+graphwalker-restful = { version = "1.0.2", path = "../graphwalker-restful" }
 axum = { version = "0.8", features = ["ws"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "signal"] }
 tower-http = { version = "0.6", features = ["fs"] }

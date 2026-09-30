@@ -23,10 +23,21 @@ fn help_shows_usage() {
 
 #[test]
 fn version_shows_version() {
-    gw().arg("--version")
+    let output = gw()
+        .arg("--version")
         .assert()
         .success()
-        .stdout(predicate::str::contains("graphwalker"));
+        .get_output()
+        .stdout
+        .clone();
+    let output = String::from_utf8(output).unwrap();
+    let prefix = format!("graphwalker {} (git ", env!("CARGO_PKG_VERSION"));
+    let git_id = output
+        .trim()
+        .strip_prefix(&prefix)
+        .and_then(|version| version.strip_suffix(')'))
+        .expect("version output should include the package version and Git ID");
+    assert!(!git_id.is_empty());
 }
 
 // ---------------------------------------------------------------------------
@@ -68,6 +79,19 @@ fn offline_small_model_edge_coverage() {
     assert!(names.contains(&"e_FirstAction".to_string()));
     assert!(names.contains(&"v_VerifySomeAction".to_string()));
     assert!(names.contains(&"v_VerifySomeOtherAction".to_string()));
+
+    let elements: Vec<(String, String)> = lines
+        .iter()
+        .filter_map(|line| {
+            let value: serde_json::Value = serde_json::from_str(line).ok()?;
+            Some((
+                value["currentElementName"].as_str()?.to_string(),
+                value["currentElementId"].as_str()?.to_string(),
+            ))
+        })
+        .collect();
+    assert!(elements.contains(&("e_FirstAction".to_string(), "e0".to_string())));
+    assert!(elements.contains(&("v_VerifySomeAction".to_string(), "n0".to_string())));
 }
 
 #[test]
