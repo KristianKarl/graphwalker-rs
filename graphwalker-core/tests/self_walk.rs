@@ -1,7 +1,60 @@
-//! GraphWalker testing itself: a meta-model whose vertices/edges represent
-//! `graphwalker-core` capabilities is walked with the crate's own
-//! `Machine`/`PathGenerator`/`StopCondition`. Each traversed element runs a
-//! real assertion against the engine. See `../test-plan.md`.
+//! GraphWalker testing itself.
+//!
+//! This is a black-box integration test (only `graphwalker-core`'s public
+//! API is used) that dogfoods the engine: a *meta-model* is built where each
+//! vertex/edge represents a specific `graphwalker-core` capability rather
+//! than an application state, and that meta-model is then walked with the
+//! crate's own [`Machine`], [`PathGenerator`] and [`StopCondition`]. This
+//! way the traversal order itself is a live product of the code under test,
+//! and every element visited during that traversal triggers a real
+//! assertion against the engine.
+//!
+//! # Two testing styles used here
+//!
+//! Most scenarios are wired directly onto the outer meta-model's own edges
+//! and vertices (e.g. guards, local/global action scripts, requirements):
+//! the real single outer walk exercises them, and [`dispatch`] asserts on
+//! the outer [`Machine`]'s state right after the element is traversed.
+//!
+//! Some capabilities can't be observed mid-walk without derailing the outer
+//! coverage-driven traversal (e.g. a guard that must always evaluate to
+//! `false`, or a stop condition/generator that needs its own independent
+//! walk to completion). For those, the dispatched function builds a small
+//! throwaway [`RuntimeModel`] + [`ExecutionContext`]/[`Machine`] and asserts
+//! against that nested run instead. Each scenario function documents which
+//! style it uses and why.
+//!
+//! # Meta-model shape
+//!
+//! The meta-model is a single cycle: `v_Start` through eleven `e_*` edges,
+//! each named after the capability it exercises, looping back via
+//! `e_restart`. There are no branch points, so with a fixed `SEED` the outer
+//! walk is fully deterministic and `EdgeCoverage(100)` is reached in exactly
+//! one lap. See [`build_meta_model`] for the full vertex/edge list and
+//! [`dispatch`] for the name -> assertion mapping.
+//!
+//! # Scope
+//!
+//! Covered: `Random` and `WeightedRandom` generators; the `Combined`
+//! (concatenated) generator; `EdgeCoverage`, `ReachedVertex` and `Combined`
+//! stop conditions; guards; local/global action scripts; shared-state
+//! portals; multi-model `Machine` instances; requirement tracking.
+//!
+//! Not yet covered (candidates for future scenarios): `QuickRandom`,
+//! `AStar`, `ShortestAllPaths`, `Predefined` and `NewYorkStreetSweeper`
+//! generators; `VertexCoverage`, `RequirementCoverage`,
+//! `DependencyEdgeCoverage`, `ReachedEdge`, `ReachedSharedState`,
+//! `TimeDuration`, `Never`, `Alternative`, `PredefinedPath` and
+//! `InternalState` stop conditions.
+//!
+//! # Extending
+//!
+//! To add a scenario: add a vertex/edge pair to [`build_meta_model`] (or
+//! attach a guard/action/requirement to an existing edge if the outer walk
+//! can exercise it directly), add its name to the `match` in [`dispatch`],
+//! and write an `assert_*` function following the pattern of the existing
+//! ones — panic messages should be prefixed with `self-walk: <element name>`
+//! so failures are attributable at a glance.
 
 use graphwalker_core::condition::StopCondition;
 use graphwalker_core::generator::PathGenerator;
@@ -11,9 +64,15 @@ use graphwalker_core::model::{
     RequirementStatus, RuntimeModel, VertexBuilder, VertexIndex,
 };
 
+/// Fixed seed for every walk in this file, so a failure is reproducible.
 const SEED: u64 = 1234;
+/// Safety cap on loop iterations: a regression that breaks termination in
+/// the generator/stop-condition machinery should fail the test, not hang it.
 const MAX_STEPS: usize = 100;
 
+/// Builds the outer meta-model: a single deterministic cycle through eleven
+/// `e_*` edges, one per capability under test, looping back via `e_restart`.
+/// See the module docs for the full rationale.
 fn build_meta_model() -> RuntimeModel {
     let v_start = VertexBuilder::new().id("v_start").name("v_Start");
     let v_vertex_visited = VertexBuilder::new()
@@ -172,6 +231,9 @@ fn build_meta_model() -> RuntimeModel {
     mb.build()
 }
 
+/// Drives the outer meta-model to completion with `graphwalker-core`'s own
+/// `Random` generator under an `EdgeCoverage(100)` stop condition, running
+/// [`dispatch`] on every element visited along the way.
 #[test]
 fn core_self_walk() {
     let model = build_meta_model();
@@ -200,6 +262,8 @@ fn core_self_walk() {
     );
 }
 
+/// Resolves a traversed [`ElementIndex`] back to the vertex/edge `name()`
+/// it was built with in [`build_meta_model`], used as the dispatch key.
 fn element_name(machine: &Machine, element: ElementIndex) -> String {
     let model = machine.current_context().model();
     match element {
@@ -208,6 +272,8 @@ fn element_name(machine: &Machine, element: ElementIndex) -> String {
     }
 }
 
+/// Maps a meta-model element name to the scenario that verifies it. Unnamed
+/// entries (`_`) are pass-through vertices/edges with no dedicated check.
 fn dispatch(machine: &Machine, name: &str) {
     match name {
         "v_VertexVisited" => assert_vertex_visited(machine),
