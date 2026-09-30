@@ -46,20 +46,20 @@ Either `--model` or `--gw` is required. They are mutually exclusive.
 One JSON object per line:
 
 ```json
-{"currentElementName":"e_SomeEdge"}
-{"currentElementName":"v_SomeVertex"}
+{"currentElementName":"e_SomeEdge","currentElementId":"e0"}
+{"currentElementName":"v_SomeVertex","currentElementId":"n0"}
 ```
 
 With `--verbose`:
 
 ```json
-{"currentElementName":"e_SomeEdge","data":"x=1; loggedIn=true"}
+{"currentElementName":"e_SomeEdge","currentElementId":"e0","data":"x=1; loggedIn=true"}
 ```
 
 With `--unvisited`:
 
 ```json
-{"currentElementName":"e_SomeEdge","numberOfElements":10,"numberOfUnvisitedElements":7,"unvisitedElements":[{"elementName":"e_Other"},{"elementName":"v_Other"}]}
+{"currentElementName":"e_SomeEdge","currentElementId":"e0","numberOfElements":10,"numberOfUnvisitedElements":7,"unvisitedElements":[{"elementName":"e_Other"},{"elementName":"v_Other"}]}
 ```
 
 With both `--verbose` and `--unvisited`, each unvisited element also includes its `elementId`.

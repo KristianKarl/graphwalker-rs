@@ -69,9 +69,15 @@ pub fn run(args: Args) -> CliResult {
         let ctx = machine.context(ctx_idx);
         let element = ctx.current_element().unwrap();
         let name = element_name(ctx, element);
+        let model = ctx.model();
+        let id = match element {
+            ElementIndex::Vertex(vi) => model.vertex(vi).id(),
+            ElementIndex::Edge(ei) => model.edge(ei).id(),
+        };
 
         let mut json = serde_json::json!({
             "currentElementName": name,
+            "currentElementId": id,
         });
 
         if args.verbose {
@@ -79,7 +85,6 @@ pub fn run(args: Args) -> CliResult {
         }
 
         if args.unvisited {
-            let model = ctx.model();
             let all = model.all_elements();
             let unvisited: Vec<_> = all.iter().filter(|e| !ctx.is_visited(**e)).collect();
 
