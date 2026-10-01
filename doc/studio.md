@@ -19,7 +19,7 @@ graphwalker-studio [OPTIONS]
 | Browser port | `-b` | `--browser-port` | `9090` | HTTP port for the web UI |
 | WebSocket port | `-w` | `--websocket-port` | `9999` | WebSocket port for the execution engine |
 | Static directory | | `--static-dir` | `static` | Directory containing the frontend files |
-| Debug logging | | `--debug` | off | Enable debug output |
+| Logging verbosity | | `--log <LEVEL>` | `error` | `error`, `warn`, `info`, `debug`, or `trace` |
 
 After starting, open [http://localhost:9090](http://localhost:9090) in your browser.
 

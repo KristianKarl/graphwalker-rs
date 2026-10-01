@@ -219,6 +219,7 @@ fn count_cul_de_sacs(model: &RuntimeModel) -> usize {
 // ---------------------------------------------------------------------------
 
 pub fn check_contexts(contexts: &[ModelContext]) -> Vec<Issue> {
+    tracing::info!(model_count = contexts.len(), "checking model collection");
     let mut issues = Vec::new();
     let mut seen_model_ids: HashSet<&str> = HashSet::new();
 
@@ -234,6 +235,11 @@ pub fn check_contexts(contexts: &[ModelContext]) -> Vec<Issue> {
         }
     }
 
+    if !issues.is_empty() {
+        tracing::warn!(issue_count = issues.len(), "model checks found issues");
+    } else {
+        tracing::debug!("model checks passed");
+    }
     issues
 }
 

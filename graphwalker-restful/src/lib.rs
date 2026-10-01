@@ -68,6 +68,7 @@ pub async fn start_rest_server_with_model(
 
 async fn serve_rest(port: u16, app: Router) -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    tracing::info!(%addr, "starting REST server");
     eprintln!("GraphWalker REST server listening on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
@@ -98,6 +99,7 @@ pub async fn start_websocket_server(port: u16) -> Result<(), Box<dyn std::error:
     let session_mgr = SessionManager::new();
     let app = build_websocket_router(session_mgr);
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    tracing::info!(%addr, "starting WebSocket server");
     eprintln!("GraphWalker WebSocket server listening on ws://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;

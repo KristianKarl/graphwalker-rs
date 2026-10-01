@@ -18,3 +18,4 @@ graphwalker-dsl = { version = "1.0.2", path = "../graphwalker-dsl" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 quick-xml = "0.37"
+tracing = "0.1"

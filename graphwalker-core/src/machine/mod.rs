@@ -143,6 +143,7 @@ impl ExecutionContext {
     pub fn set_current_element(&mut self, element: ElementIndex) {
         self.last_element = self.current_element;
         self.current_element = Some(element);
+        tracing::trace!(previous = ?self.last_element, current = ?element, "execution context moved");
         if self.visited.insert(element) {
             match element {
                 ElementIndex::Vertex(_) => self.visited_vertex_count += 1,
@@ -186,6 +187,7 @@ impl ExecutionContext {
     }
 
     pub fn set_execution_status(&mut self, status: ExecutionStatus) {
+        tracing::debug!(previous = ?self.execution_status, current = ?status, model_id = %self.model.id(), "execution status changed");
         self.execution_status = status;
     }
 
@@ -245,21 +247,24 @@ impl ExecutionContext {
             return Ok(());
         }
 
-        if Self::is_global_script(script) {
+        let is_global = Self::is_global_script(script);
+        let result = if is_global {
             let stripped = Self::strip_global_prefix(script);
             let mut scope = self.global_scope.borrow_mut();
             let prepared = Self::prepare_script(&stripped, &scope);
-            let _ = self
-                .engine
-                .eval_with_scope::<Dynamic>(&mut scope, &prepared)?;
+            self.engine
+                .eval_with_scope::<Dynamic>(&mut scope, &prepared)
         } else {
             let mut scope = self.local_scope.borrow_mut();
             let prepared = Self::prepare_script(script, &scope);
-            let _ = self
-                .engine
-                .eval_with_scope::<Dynamic>(&mut scope, &prepared)?;
-        }
-        Ok(())
+            self.engine
+                .eval_with_scope::<Dynamic>(&mut scope, &prepared)
+        };
+
+        result.map(|_| ()).map_err(|error| {
+            tracing::warn!(is_global, script_length = script.len(), %error, "action script failed");
+            ScriptError::from(error)
+        })
     }
 
     // Bridges JavaScript action syntax to Rhai:
@@ -330,28 +335,50 @@ impl ExecutionContext {
             return Ok(true);
         }
 
-        if Self::is_global_script(script) {
+        let is_global = Self::is_global_script(script);
+        let result = if is_global {
             let stripped = Self::strip_global_prefix(script);
             let mut scope = self.global_scope.borrow_mut();
-            let result: Dynamic = self.engine.eval_with_scope(&mut scope, &stripped)?;
-            result.as_bool().map_err(|_| {
-                ScriptError::new(format!("Guard did not evaluate to boolean: {}", script))
-            })
+            self.engine
+                .eval_with_scope::<Dynamic>(&mut scope, &stripped)
         } else {
             let mut scope = self.local_scope.borrow_mut();
-            let result: Dynamic = self.engine.eval_with_scope(&mut scope, script)?;
-            result.as_bool().map_err(|_| {
+            self.engine.eval_with_scope::<Dynamic>(&mut scope, script)
+        };
+
+        result
+            .map_err(|error| {
+                tracing::warn!(
+                    is_global,
+                    script_length = script.len(),
+                    "guard evaluation failed"
+                );
+                ScriptError::from(error)
+            })?
+            .as_bool()
+            .map_err(|_| {
+                tracing::warn!(
+                    is_global,
+                    script_length = script.len(),
+                    "guard result was not a boolean"
+                );
                 ScriptError::new(format!("Guard did not evaluate to boolean: {}", script))
             })
-        }
     }
 
     pub fn is_edge_available(&self, edge_idx: EdgeIndex) -> bool {
         let edge = self.model.edge(edge_idx);
         match edge.guard() {
-            Some(guard) if guard.has_script() => {
-                self.evaluate_guard(guard.script()).unwrap_or(false)
-            }
+            Some(guard) if guard.has_script() => match self.evaluate_guard(guard.script()) {
+                Ok(available) => {
+                    tracing::trace!(edge_id = %edge.id(), available, "evaluated edge guard");
+                    available
+                }
+                Err(_) => {
+                    tracing::warn!(edge_id = %edge.id(), "guarded edge is unavailable");
+                    false
+                }
+            },
             _ => true,
         }
     }
@@ -423,8 +450,15 @@ impl ExecutionContext {
     // -- Algorithm cache --
 
     pub fn floyd_warshall(&self) -> &FloydWarshall {
-        self.floyd_warshall
-            .get_or_init(|| FloydWarshall::new(&self.model))
+        self.floyd_warshall.get_or_init(|| {
+            tracing::debug!(
+                model_id = %self.model.id(),
+                vertex_count = self.model.vertices().len(),
+                edge_count = self.model.edges().len(),
+                "building shortest-path cache"
+            );
+            FloydWarshall::new(&self.model)
+        })
     }
 
     // -- RNG --
@@ -531,8 +565,11 @@ impl Machine {
         rng: StdRng,
     ) -> Result<Self, MachineError> {
         if entries.is_empty() {
+            tracing::warn!("cannot create machine without execution contexts");
             return Err(MachineError::NoContexts);
         }
+
+        let context_count = entries.len();
 
         let shared_global = Rc::new(RefCell::new(Scope::new()));
         let mut contexts = Vec::with_capacity(entries.len());
@@ -545,13 +582,22 @@ impl Machine {
         }
 
         for ctx in &contexts {
-            ctx.execute_model_actions().map_err(MachineError::Script)?;
+            ctx.execute_model_actions().map_err(|error| {
+                tracing::warn!(model_id = %ctx.model().id(), %error, "model initialization action failed");
+                MachineError::Script(error)
+            })?;
         }
 
-        let start_idx = contexts
-            .iter()
-            .position(|ctx| ctx.next_element().is_some())
-            .ok_or(MachineError::NoStartContext)?;
+        let Some(start_idx) = contexts.iter().position(|ctx| ctx.next_element().is_some()) else {
+            tracing::warn!(context_count, "machine has no configured start context");
+            return Err(MachineError::NoStartContext);
+        };
+
+        tracing::info!(
+            context_count,
+            start_context = start_idx,
+            "machine initialized"
+        );
 
         Ok(Self {
             contexts,
@@ -611,6 +657,11 @@ impl Machine {
         for i in 0..self.contexts.len() {
             if self.has_next_step_for_context(i) {
                 if i != self.current_context_idx && self.contexts[i].next_element().is_some() {
+                    tracing::debug!(
+                        previous_context = self.current_context_idx,
+                        next_context = i,
+                        "switching execution context"
+                    );
                     self.current_context_idx = i;
                 }
                 return true;
@@ -630,6 +681,11 @@ impl Machine {
         }
 
         self.contexts[i].set_execution_status(ExecutionStatus::Completed);
+        tracing::info!(
+            model_id = %self.contexts[i].model().id(),
+            fulfilment = self.generators[i].stop_condition.get_fulfilment(&self.contexts[i]),
+            "model execution completed"
+        );
         self.update_model_requirements(i);
         false
     }
@@ -641,13 +697,22 @@ impl Machine {
         let element = self.contexts[ctx_idx]
             .current_element()
             .ok_or(MachineError::NoCurrentElement)?;
+        tracing::trace!(context = ctx_idx, ?element, "executing model element");
 
         self.notify_observers(ctx_idx, element, EventType::BeforeElement);
 
         if !self.generators[ctx_idx].skip_actions() {
             self.contexts[ctx_idx]
                 .execute_element_actions(element)
-                .map_err(MachineError::Script)?;
+                .map_err(|error| {
+                    tracing::error!(
+                        model_id = %self.contexts[ctx_idx].model().id(),
+                        ?element,
+                        %error,
+                        "element action failed"
+                    );
+                    MachineError::Script(error)
+                })?;
         }
 
         self.update_element_requirements(ctx_idx, element);
@@ -720,8 +785,12 @@ impl Machine {
                     let ctx = &self.contexts[ctx_idx];
                     let model = ctx.model();
                     let model_name = model.name().unwrap_or(model.id());
+                    tracing::warn!(model_id = %model.id(), error = %e, "path generator could not advance");
                     let detail = match e {
-                        GeneratorError::NoPathFound { from: Some(elem), to: Some(target) } => {
+                        GeneratorError::NoPathFound {
+                            from: Some(elem),
+                            to: Some(target),
+                        } => {
                             let from_desc = self.describe_element(ctx_idx, elem);
                             let to_desc = self.describe_element(ctx_idx, target);
                             format!(
@@ -729,12 +798,12 @@ impl Machine {
                                 from_desc, to_desc, model_name
                             )
                         }
-                        GeneratorError::NoPathFound { from: Some(elem), to: None } => {
+                        GeneratorError::NoPathFound {
+                            from: Some(elem),
+                            to: None,
+                        } => {
                             let elem_desc = self.describe_element(ctx_idx, elem);
-                            format!(
-                                "No path found from {} in model '{}'",
-                                elem_desc, model_name
-                            )
+                            format!("No path found from {} in model '{}'", elem_desc, model_name)
                         }
                         GeneratorError::NoPathFound { .. } => {
                             format!("No path found in model '{}'", model_name)
@@ -783,6 +852,13 @@ impl Machine {
         let (target_ctx_idx, target_vertex_idx) = candidates[pick];
 
         if target_ctx_idx != current_idx {
+            tracing::debug!(
+                from_context = current_idx,
+                to_context = target_ctx_idx,
+                shared_state = shared_name,
+                target_vertex = target_vertex_idx.0,
+                "following shared-state portal"
+            );
             let current_element = self.contexts[current_idx].current_element();
             self.last_portal_source = current_element.map(|e| (current_idx, e));
 

@@ -158,10 +158,9 @@ impl PathGenerator {
 
     pub fn has_next_step(&self, ctx: &ExecutionContext) -> bool {
         match &self.kind {
-            GeneratorKind::Combined { generators, index } => generators
-                .iter()
-                .skip(*index)
-                .any(|g| g.has_next_step(ctx)),
+            GeneratorKind::Combined { generators, index } => {
+                generators.iter().skip(*index).any(|g| g.has_next_step(ctx))
+            }
             GeneratorKind::NewYorkStreetSweeper { path, .. } => {
                 path.as_ref().map_or(true, |p| !p.is_empty())
             }
@@ -177,6 +176,7 @@ impl PathGenerator {
         let current = ctx
             .current_element()
             .ok_or(GeneratorError::NoCurrentElement)?;
+        tracing::trace!(?current, generator = ?self.kind, "selecting next model element");
 
         match &mut self.kind {
             GeneratorKind::Random => {
@@ -345,8 +345,7 @@ impl PathGenerator {
                         }
                     };
 
-                    let result =
-                        algorithm::chinese_postman_path(ctx.model(), start_vertex)?;
+                    let result = algorithm::chinese_postman_path(ctx.model(), start_vertex)?;
 
                     if !*warnings_emitted {
                         for warning in &result.warnings {
@@ -357,8 +356,7 @@ impl PathGenerator {
 
                     let mut computed_path = result.path;
                     if started_on_edge {
-                        computed_path
-                            .insert(0, ElementIndex::Vertex(start_vertex));
+                        computed_path.insert(0, ElementIndex::Vertex(start_vertex));
                     }
 
                     *path = Some(computed_path);

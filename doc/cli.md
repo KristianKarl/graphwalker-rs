@@ -7,14 +7,14 @@ nav_order: 4
 # CLI Reference
 
 ```
-graphwalker [--debug] <subcommand>
+graphwalker [--log <LEVEL>] <subcommand>
 ```
 
 ## Global flags
 
 | Flag | Description |
 |------|-------------|
-| `--debug` | Enable debug logging |
+| `--log <LEVEL>` | Set logging verbosity: `error`, `warn`, `info`, `debug`, or `trace` (default: `error`) |
 | `--help` | Show help |
 | `--version` | Show version |
 

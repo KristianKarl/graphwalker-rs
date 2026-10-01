@@ -14,3 +14,4 @@ categories = ["parser-implementations"]
 
 [dependencies]
 graphwalker-core = { version = "1.0.2", path = "../graphwalker-core" }
+tracing = "0.1"

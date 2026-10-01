@@ -15,8 +15,16 @@ pub fn chinese_postman_path(
 ) -> Result<ChinesePostmanResult, AlgorithmError> {
     let num_vertices = model.vertices().len();
     let num_edges = model.edges().len();
+    tracing::debug!(
+        model_id = %model.id(),
+        ?start,
+        vertex_count = num_vertices,
+        edge_count = num_edges,
+        "computing Chinese postman path"
+    );
 
     if num_edges == 0 {
+        tracing::debug!(model_id = %model.id(), "Chinese postman path is empty");
         return Ok(ChinesePostmanResult {
             path: Vec::new(),
             warnings: Vec::new(),
@@ -24,6 +32,13 @@ pub fn chinese_postman_path(
     }
 
     let mut warnings = collect_warnings(model);
+    for warning in &warnings {
+        tracing::warn!(
+            model_id = %model.id(),
+            warning = %warning,
+            "Chinese postman path ignores model feature"
+        );
+    }
     let mut adj = build_adjacency_list(model, &mut warnings);
 
     let has_edges = !adj[start.0].is_empty()
@@ -31,6 +46,7 @@ pub fn chinese_postman_path(
             .iter()
             .any(|edges| edges.iter().any(|&(_, t)| t == start));
     if !has_edges {
+        tracing::warn!(model_id = %model.id(), ?start, "Chinese postman start vertex is disconnected");
         return Err(AlgorithmError::NotStronglyConnected(format!(
             "Start vertex '{}' is not connected to any edges",
             model
@@ -58,10 +74,17 @@ pub fn chinese_postman_path(
     let is_eulerian = excess.iter().all(|&e| e == 0);
 
     if !is_eulerian {
+        tracing::debug!(model_id = %model.id(), "augmenting unbalanced graph for Chinese postman path");
         augment_graph(&mut adj, &excess, num_vertices)?;
     }
 
     let path = hierholzer(&mut adj, start.0);
+    tracing::debug!(
+        model_id = %model.id(),
+        path_length = path.len(),
+        warning_count = warnings.len(),
+        "Chinese postman path computed"
+    );
 
     Ok(ChinesePostmanResult { path, warnings })
 }
@@ -73,16 +96,10 @@ fn collect_warnings(model: &RuntimeModel) -> Vec<String> {
         let name = edge.name().unwrap_or(edge.id());
 
         if edge.has_guard() {
-            warnings.push(format!(
-                "Edge '{}' has a guard which will be ignored",
-                name
-            ));
+            warnings.push(format!("Edge '{}' has a guard which will be ignored", name));
         }
         if edge.has_actions() {
-            warnings.push(format!(
-                "Edge '{}' has actions which will be ignored",
-                name
-            ));
+            warnings.push(format!("Edge '{}' has actions which will be ignored", name));
         }
         if edge.weight() != 0.0 && edge.weight() != 1.0 {
             warnings.push(format!(
@@ -209,6 +226,12 @@ fn check_strong_connectivity(
             unreachable_names.join(", ")
         );
 
+        tracing::warn!(
+            model_id = %model.id(),
+            start = %start_name,
+            unreachable_count = unreachable_names.len(),
+            "graph is not strongly connected"
+        );
         return Err(AlgorithmError::NotStronglyConnected(msg));
     }
 
@@ -258,6 +281,7 @@ fn augment_graph(
     if n == 0 {
         return Ok(());
     }
+    tracing::debug!(imbalance_units = n, "matching excess and deficit degrees");
 
     let unique_supply: Vec<usize> = {
         let mut v = supply_units.clone();
@@ -291,6 +315,12 @@ fn augment_graph(
 
         let bfs_result = &bfs_cache[&sv];
         let path = reconstruct_path(bfs_result, sv, dv);
+        tracing::trace!(
+            from_vertex = sv,
+            to_vertex = dv,
+            duplicated_edges = path.len(),
+            "augmenting Chinese postman route"
+        );
 
         for (src, ei, tgt) in path {
             adj[src].push((ei, VertexIndex(tgt)));

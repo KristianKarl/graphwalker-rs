@@ -1173,10 +1173,7 @@ fn machine_nyss_skips_actions() {
         machine.get_next_step().unwrap();
     }
 
-    let counter = machine
-        .current_context()
-        .get_attribute("counter")
-        .unwrap();
+    let counter = machine.current_context().get_attribute("counter").unwrap();
     assert_eq!(
         counter.as_int().unwrap(),
         0,

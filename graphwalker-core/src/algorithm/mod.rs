@@ -45,8 +45,16 @@ impl FloydWarshall {
         let num_vertices = model.vertices().len();
         let num_edges = model.edges().len();
         let n = num_vertices + num_edges;
+        tracing::debug!(
+            model_id = %model.id(),
+            vertex_count = num_vertices,
+            edge_count = num_edges,
+            element_count = n,
+            "computing all-pairs shortest paths"
+        );
 
         if n == 0 {
+            tracing::debug!(model_id = %model.id(), "shortest-path cache is empty for empty model");
             return Self {
                 distances: Vec::new(),
                 n: 0,
@@ -88,6 +96,8 @@ impl FloydWarshall {
                 }
             }
         }
+
+        tracing::trace!(model_id = %model.id(), "all-pairs shortest paths computed");
 
         Self {
             distances,
@@ -145,13 +155,22 @@ pub fn astar_next_element(
         return Some(target);
     }
     if neighbors.is_empty() {
+        tracing::trace!(?current, ?target, "A* has no candidate neighbors");
         return None;
     }
-    neighbors.iter().copied().min_by(|&a, &b| {
+    let selected = neighbors.iter().copied().min_by(|&a, &b| {
         let fa = fw.shortest_distance(current, a) as i64 + fw.shortest_distance(a, target) as i64;
         let fb = fw.shortest_distance(current, b) as i64 + fw.shortest_distance(b, target) as i64;
         fa.cmp(&fb)
-    })
+    });
+    tracing::trace!(
+        ?current,
+        ?target,
+        ?selected,
+        neighbor_count = neighbors.len(),
+        "A* selected next element"
+    );
+    selected
 }
 
 // ---------------------------------------------------------------------------
@@ -179,11 +198,13 @@ pub fn eulerian_type(model: &RuntimeModel) -> EulerianType {
 
     let non_zero = polarity.iter().filter(|&&p| p != 0).count();
 
-    match non_zero {
+    let kind = match non_zero {
         0 => EulerianType::Eulerian,
         2 => EulerianType::SemiEulerian,
         _ => EulerianType::NotEulerian,
-    }
+    };
+    tracing::debug!(model_id = %model.id(), ?kind, "classified graph Eulerian type");
+    kind
 }
 
 // ---------------------------------------------------------------------------
@@ -195,8 +216,10 @@ pub fn euler_path(
     start: ElementIndex,
 ) -> Result<Vec<ElementIndex>, AlgorithmError> {
     if eulerian_type(model) == EulerianType::NotEulerian {
+        tracing::warn!(model_id = %model.id(), "cannot build Euler path for non-Eulerian graph");
         return Err(AlgorithmError::NotEulerian);
     }
+    tracing::debug!(model_id = %model.id(), ?start, edge_count = model.edges().len(), "building Euler path");
 
     match start {
         ElementIndex::Edge(ei) => {
@@ -228,6 +251,12 @@ fn fleury_trail(
 
     while visited_edges.len() < total_edges {
         let edge = fleury_next_edge(model, visited_edges, current)?;
+        tracing::trace!(
+            ?current,
+            ?edge,
+            visited_count = visited_edges.len(),
+            "Fleury selected edge"
+        );
         trail.push(ElementIndex::Edge(edge));
         visited_edges.insert(edge);
         let target = model
@@ -251,8 +280,10 @@ fn fleury_next_edge(
     for &edge_idx in model.out_edges(vertex) {
         if !visited_edges.contains(&edge_idx) {
             if !is_bridge(model, visited_edges, edge_idx) {
+                tracing::trace!(?vertex, ?edge_idx, "Fleury selected non-bridge edge");
                 return Ok(edge_idx);
             } else {
+                tracing::trace!(?vertex, ?edge_idx, "Fleury deferred bridge edge");
                 bridges.push(edge_idx);
             }
         }

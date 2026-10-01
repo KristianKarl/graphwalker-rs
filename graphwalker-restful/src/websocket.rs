@@ -320,10 +320,7 @@ async fn cmd_get_next(own_session: &Option<SessionHandle>) -> Result<Value, Stri
     })
     .await?;
 
-    let model_id = val
-        .get("modelId")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let model_id = val.get("modelId").and_then(|v| v.as_str()).unwrap_or("");
     let element_id = val
         .get("currentElementID")
         .and_then(|v| v.as_str())
@@ -407,7 +404,11 @@ async fn cmd_set_data(
         .and_then(|a| a.as_str())
         .ok_or("Missing 'action' field")?
         .to_string();
-    send_command(&session.machine_tx, |reply| Command::SetData { script, reply }).await?;
+    send_command(&session.machine_tx, |reply| Command::SetData {
+        script,
+        reply,
+    })
+    .await?;
     Ok(json!({"command": "setData", "success": true}))
 }
 
@@ -423,8 +424,10 @@ async fn cmd_get_model(own_session: &Option<SessionHandle>) -> Result<Value, Str
 
 async fn cmd_update_all_elements(own_session: &Option<SessionHandle>) -> Result<Value, String> {
     let session = own_session.as_ref().ok_or("No active session")?;
-    let val =
-        send_command(&session.machine_tx, |reply| Command::UpdateAllElements { reply }).await?;
+    let val = send_command(&session.machine_tx, |reply| Command::UpdateAllElements {
+        reply,
+    })
+    .await?;
     Ok(json!({
         "command": "updateAllElements",
         "elements": val.get("elements").unwrap_or(&json!([])),
@@ -497,7 +500,9 @@ async fn cmd_subscribe_session(
         .ok()
         .and_then(|v| v.get("models").and_then(|m| m.as_str()).map(String::from))
         .and_then(|s| serde_json::from_str::<Value>(&s).ok())
-        .unwrap_or_else(|| serde_json::from_str::<Value>(&session.model_json).unwrap_or(json!(null)));
+        .unwrap_or_else(|| {
+            serde_json::from_str::<Value>(&session.model_json).unwrap_or(json!(null))
+        });
 
     let elem_count = elements.as_array().map(|a| a.len()).unwrap_or(0);
     debug!(session_id = %session_id, elements = elem_count, "subscribing to broadcast");
@@ -567,10 +572,7 @@ fn cmd_step_session(session_mgr: &SessionManager, request: &Value) -> Result<Val
 
 fn cmd_set_delay(session_mgr: &SessionManager, request: &Value) -> Result<Value, String> {
     let session = get_target_session(session_mgr, request)?;
-    let ms = request
-        .get("value")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(0);
+    let ms = request.get("value").and_then(|v| v.as_u64()).unwrap_or(0);
     debug!(session_id = %session.id, delay_ms = ms, "setDelay");
     session.control.set_delay(ms);
     Ok(json!({"command": "setDelay", "success": true}))

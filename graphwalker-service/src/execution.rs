@@ -43,6 +43,14 @@ impl ExecutionRegistry {
     }
 
     pub fn start(&self, request: StartExecution) -> ServiceResult<StartExecutionResult> {
+        tracing::debug!(
+            model_count = request
+                .model
+                .get("models")
+                .and_then(|value| value.as_array())
+                .map_or(0, Vec::len),
+            "starting execution request"
+        );
         let mut executions = self.executions.write().map_err(lock_error)?;
         if executions.len() >= self.limits.max_executions {
             return Err(ServiceError::new(
@@ -73,6 +81,7 @@ impl ExecutionRegistry {
 
         let seed = started_rx.recv().map_err(|_| unavailable_error())??;
         executions.insert(execution_id.clone(), ExecutionHandle { sender });
+        tracing::info!(execution_id = %execution_id, seed, "execution started");
 
         Ok(StartExecutionResult { execution_id, seed })
     }
@@ -235,6 +244,7 @@ fn worker(
             state
         }
         Err(error) => {
+            tracing::warn!(error = %error, "execution failed to initialize");
             let _ = started.send(Err(error));
             return;
         }
@@ -248,6 +258,7 @@ fn worker(
                 let _ = reply.send(Ok(ExecutionStatus { has_next, data }));
             }
             Command::NextStep { reply } => {
+                tracing::trace!("advancing execution");
                 let _ = reply.send(next_step(&mut state.machine));
             }
             Command::Data { reply } => {
@@ -271,6 +282,7 @@ fn worker(
                 let _ = reply.send(Ok(element_statuses(&state.machine)));
             }
             Command::Close { reply } => {
+                tracing::info!("execution closed");
                 let _ = reply.send(());
                 break;
             }
@@ -357,6 +369,7 @@ fn next_step(machine: &mut Machine) -> ServiceResult<StepResult> {
             )
         }
     };
+    tracing::trace!(model_id = %context.model().id(), element_id = %id, ?kind, "execution advanced");
 
     Ok(StepResult {
         completed: false,

@@ -28,6 +28,27 @@ const TOTAL_TIMEOUT: Duration = Duration::from_secs(60);
 
 type Socket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
+#[test]
+fn studio_log_levels_are_validated() {
+    let binary = cargo_bin("graphwalker-studio");
+    for level in ["error", "warn", "info", "debug", "trace"] {
+        let output = Command::new(&binary)
+            .args(["--log", level, "--help"])
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "Studio rejected --log {level}");
+    }
+
+    let output = Command::new(binary)
+        .args(["--log", "verbose", "--help"])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "Studio accepted an unknown log level"
+    );
+}
+
 #[tokio::test]
 async fn studio_self_walk() {
     timeout(TOTAL_TIMEOUT, studio_self_walk_inner())

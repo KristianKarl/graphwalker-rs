@@ -150,6 +150,7 @@ impl SessionManager {
             .write()
             .unwrap()
             .insert(id.clone(), handle.clone());
+        tracing::info!(session_id = %id, seed = ?seed, "session created");
         let _ = self.change_tx.send(json!({
             "command": "sessionCreated",
             "sessionId": id,
@@ -160,6 +161,7 @@ impl SessionManager {
 
     pub fn remove_session(&self, id: &str) {
         if let Some(session) = self.sessions.write().unwrap().remove(id) {
+            tracing::info!(session_id = %id, "session removed");
             session.control.reset();
             let _ = self.change_tx.send(json!({
                 "command": "sessionEnded",

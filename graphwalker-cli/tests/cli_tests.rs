@@ -22,6 +22,46 @@ fn help_shows_usage() {
 }
 
 #[test]
+fn log_levels_filter_cli_events() {
+    let model = fixture("json/SmallModel.json");
+    let args = ["offline", "-m", &model, "random(edge_coverage(100))"];
+
+    for (level, expected_event) in [
+        ("error", None),
+        ("warn", None),
+        ("info", Some("machine initialized")),
+        ("debug", Some("parsed JSON model collection")),
+        ("trace", Some("parsing generator expression")),
+    ] {
+        let output = gw()
+            .args(["--log", level])
+            .args(args)
+            .assert()
+            .success()
+            .get_output()
+            .stderr
+            .clone();
+        let stderr = String::from_utf8(output).unwrap();
+        if let Some(event) = expected_event {
+            assert!(
+                stderr.contains(event),
+                "--log {level} should include {event:?}: {stderr}"
+            );
+        } else {
+            assert!(
+                !stderr.contains("machine initialized"),
+                "--log {level} should filter info events: {stderr}"
+            );
+        }
+    }
+}
+
+#[test]
+fn log_rejects_unknown_level() {
+    gw().args(["--log", "verbose", "--help"]).assert().failure();
+}
+
+#[test]
 fn version_shows_version() {
     let output = gw()
         .arg("--version")
@@ -47,7 +87,12 @@ fn version_shows_version() {
 #[test]
 fn offline_simplest_model() {
     let out = gw()
-        .args(["offline", "-m", &fixture("json/SimplestModel.json"), "random(vertex_coverage(100))"])
+        .args([
+            "offline",
+            "-m",
+            &fixture("json/SimplestModel.json"),
+            "random(vertex_coverage(100))",
+        ])
         .assert()
         .success();
 
@@ -60,13 +105,22 @@ fn offline_simplest_model() {
 #[test]
 fn offline_small_model_edge_coverage() {
     let out = gw()
-        .args(["offline", "-m", &fixture("json/SmallModel.json"), "random(edge_coverage(100))"])
+        .args([
+            "offline",
+            "-m",
+            &fixture("json/SmallModel.json"),
+            "random(edge_coverage(100))",
+        ])
         .assert()
         .success();
 
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
     let lines: Vec<&str> = stdout.lines().collect();
-    assert!(lines.len() >= 4, "Expected at least 4 steps for 4 edges, got {}", lines.len());
+    assert!(
+        lines.len() >= 4,
+        "Expected at least 4 steps for 4 edges, got {}",
+        lines.len()
+    );
 
     let names: Vec<String> = lines
         .iter()
@@ -103,8 +157,12 @@ fn offline_with_seed_is_deterministic() {
     let run = |seed: u64| -> Vec<serde_json::Value> {
         let out = gw()
             .args([
-                "offline", "-s", &seed.to_string(),
-                "-m", &fixture("json/SmallModel.json"), "random(edge_coverage(100))",
+                "offline",
+                "-s",
+                &seed.to_string(),
+                "-m",
+                &fixture("json/SmallModel.json"),
+                "random(edge_coverage(100))",
             ])
             .assert()
             .success();
@@ -124,23 +182,34 @@ fn offline_with_seed_is_deterministic() {
     assert_eq!(first, second, "Same seed should produce identical output");
 
     let different = run(99);
-    assert_ne!(first, different, "Different seeds should produce different output");
+    assert_ne!(
+        first, different,
+        "Different seeds should produce different output"
+    );
 }
 
 #[test]
 fn offline_verbose_includes_data() {
     let out = gw()
         .args([
-            "offline", "-o",
-            "-m", &fixture("json/SmallModel.json"), "random(edge_coverage(100))",
+            "offline",
+            "-o",
+            "-m",
+            &fixture("json/SmallModel.json"),
+            "random(edge_coverage(100))",
         ])
         .assert()
         .success();
 
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
     for line in stdout.lines() {
-        let v: serde_json::Value = serde_json::from_str(line).expect("Each line should be valid JSON");
-        assert!(v.get("data").is_some(), "Verbose mode should include 'data' field: {}", line);
+        let v: serde_json::Value =
+            serde_json::from_str(line).expect("Each line should be valid JSON");
+        assert!(
+            v.get("data").is_some(),
+            "Verbose mode should include 'data' field: {}",
+            line
+        );
     }
 }
 
@@ -148,19 +217,24 @@ fn offline_verbose_includes_data() {
 fn offline_unvisited_shows_counts() {
     let out = gw()
         .args([
-            "offline", "-u",
-            "-m", &fixture("json/SmallModel.json"), "random(edge_coverage(100))",
+            "offline",
+            "-u",
+            "-m",
+            &fixture("json/SmallModel.json"),
+            "random(edge_coverage(100))",
         ])
         .assert()
         .success();
 
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
-    let first_line: serde_json::Value = serde_json::from_str(stdout.lines().next().unwrap()).unwrap();
+    let first_line: serde_json::Value =
+        serde_json::from_str(stdout.lines().next().unwrap()).unwrap();
     assert!(first_line.get("numberOfElements").is_some());
     assert!(first_line.get("numberOfUnvisitedElements").is_some());
     assert!(first_line.get("unvisitedElements").is_some());
 
-    let last_line: serde_json::Value = serde_json::from_str(stdout.lines().last().unwrap()).unwrap();
+    let last_line: serde_json::Value =
+        serde_json::from_str(stdout.lines().last().unwrap()).unwrap();
     let unvisited = last_line["numberOfUnvisitedElements"].as_u64().unwrap();
     assert_eq!(unvisited, 0, "Last step should have 0 unvisited elements");
 }
@@ -177,8 +251,12 @@ fn offline_with_gw_flag() {
 fn offline_custom_start_element() {
     let out = gw()
         .args([
-            "offline", "-e", "v_VerifySomeOtherAction",
-            "-m", &fixture("json/SmallModel.json"), "random(vertex_coverage(100))",
+            "offline",
+            "-e",
+            "v_VerifySomeOtherAction",
+            "-m",
+            &fixture("json/SmallModel.json"),
+            "random(vertex_coverage(100))",
         ])
         .assert()
         .success();
@@ -234,10 +312,22 @@ fn offline_multi_model_shared_state() {
         })
         .collect();
 
-    assert!(names.contains(&"e_StartA".to_string()), "Should visit ModelA's start edge");
-    assert!(names.contains(&"v_A1".to_string()), "Should visit ModelA vertex");
-    assert!(names.contains(&"e_Explore".to_string()), "Should cross into ModelB via shared state");
-    assert!(names.contains(&"v_B1".to_string()), "Should visit ModelB vertex");
+    assert!(
+        names.contains(&"e_StartA".to_string()),
+        "Should visit ModelA's start edge"
+    );
+    assert!(
+        names.contains(&"v_A1".to_string()),
+        "Should visit ModelA vertex"
+    );
+    assert!(
+        names.contains(&"e_Explore".to_string()),
+        "Should cross into ModelB via shared state"
+    );
+    assert!(
+        names.contains(&"v_B1".to_string()),
+        "Should visit ModelB vertex"
+    );
 }
 
 #[test]
@@ -245,7 +335,9 @@ fn offline_a_star_reached_vertex() {
     let out = gw()
         .args([
             "offline",
-            "-m", &fixture("json/SmallModel.json"), "a_star(reached_vertex(v_VerifySomeOtherAction))",
+            "-m",
+            &fixture("json/SmallModel.json"),
+            "a_star(reached_vertex(v_VerifySomeOtherAction))",
         ])
         .assert()
         .success();
@@ -272,7 +364,9 @@ fn offline_a_star_reached_edge() {
     let out = gw()
         .args([
             "offline",
-            "-m", &fixture("json/SmallModel.json"), "a_star(reached_edge(e_AnotherAction))",
+            "-m",
+            &fixture("json/SmallModel.json"),
+            "a_star(reached_edge(e_AnotherAction))",
         ])
         .assert()
         .success();
@@ -295,7 +389,9 @@ fn offline_vertex_coverage() {
     let out = gw()
         .args([
             "offline",
-            "-m", &fixture("json/SmallModel.json"), "random(vertex_coverage(100))",
+            "-m",
+            &fixture("json/SmallModel.json"),
+            "random(vertex_coverage(100))",
         ])
         .assert()
         .success();
@@ -320,30 +416,42 @@ fn offline_vertex_coverage() {
 
 #[test]
 fn offline_nonexistent_file() {
-    gw().args(["offline", "-m", "nonexistent.json", "random(edge_coverage(100))"])
-        .assert()
-        .failure();
+    gw().args([
+        "offline",
+        "-m",
+        "nonexistent.json",
+        "random(edge_coverage(100))",
+    ])
+    .assert()
+    .failure();
 }
 
 #[test]
 fn offline_no_model_args() {
-    gw().args(["offline"])
-        .assert()
-        .failure();
+    gw().args(["offline"]).assert().failure();
 }
 
 #[test]
 fn offline_invalid_generator() {
-    gw().args(["offline", "-m", &fixture("json/SmallModel.json"), "not_a_generator(100)"])
-        .assert()
-        .failure();
+    gw().args([
+        "offline",
+        "-m",
+        &fixture("json/SmallModel.json"),
+        "not_a_generator(100)",
+    ])
+    .assert()
+    .failure();
 }
 
 #[test]
 fn offline_start_element_not_found() {
     gw().args([
-        "offline", "-e", "v_DoesNotExist",
-        "-m", &fixture("json/SmallModel.json"), "random(edge_coverage(100))",
+        "offline",
+        "-e",
+        "v_DoesNotExist",
+        "-m",
+        &fixture("json/SmallModel.json"),
+        "random(edge_coverage(100))",
     ])
     .assert()
     .failure()
@@ -365,10 +473,15 @@ fn offline_invalid_json() {
 
 #[test]
 fn check_valid_model() {
-    gw().args(["check", "-m", &fixture("json/SmallModel.json"), "random(edge_coverage(100))"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("No issues found"));
+    gw().args([
+        "check",
+        "-m",
+        &fixture("json/SmallModel.json"),
+        "random(edge_coverage(100))",
+    ])
+    .assert()
+    .success()
+    .stdout(predicate::str::contains("No issues found"));
 }
 
 #[test]
@@ -427,9 +540,7 @@ fn check_statistics_multi_model() {
 
 #[test]
 fn check_no_model_args() {
-    gw().args(["check"])
-        .assert()
-        .failure();
+    gw().args(["check"]).assert().failure();
 }
 
 #[test]
@@ -494,7 +605,10 @@ fn methods_sorted_alphabetically() {
     let names: Vec<&str> = stdout.lines().collect();
     let mut sorted = names.clone();
     sorted.sort();
-    assert_eq!(names, sorted, "Methods output should be sorted alphabetically");
+    assert_eq!(
+        names, sorted,
+        "Methods output should be sorted alphabetically"
+    );
 }
 
 #[test]
@@ -566,7 +680,10 @@ fn requirements_model_without_requirements() {
         .success();
 
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
-    assert!(stdout.trim().is_empty(), "Model without requirements should produce empty output");
+    assert!(
+        stdout.trim().is_empty(),
+        "Model without requirements should produce empty output"
+    );
 }
 
 #[test]
@@ -590,13 +707,23 @@ fn requirements_sorted() {
 #[test]
 fn convert_graphml_to_json() {
     let out = gw()
-        .args(["convert", "--input", &fixture("graphml/Login.graphml"), "--format", "json"])
+        .args([
+            "convert",
+            "--input",
+            &fixture("graphml/Login.graphml"),
+            "--format",
+            "json",
+        ])
         .assert()
         .success();
 
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
-    let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("Output should be valid JSON");
-    assert!(parsed.get("models").is_some(), "JSON output should have 'models' key");
+    let parsed: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Output should be valid JSON");
+    assert!(
+        parsed.get("models").is_some(),
+        "JSON output should have 'models' key"
+    );
 
     let models = parsed["models"].as_array().unwrap();
     assert!(!models.is_empty(), "Should have at least one model");
@@ -607,12 +734,19 @@ fn convert_graphml_to_json() {
 #[test]
 fn convert_json_to_json() {
     let out = gw()
-        .args(["convert", "--input", &fixture("json/SmallModel.json"), "--format", "json"])
+        .args([
+            "convert",
+            "--input",
+            &fixture("json/SmallModel.json"),
+            "--format",
+            "json",
+        ])
         .assert()
         .success();
 
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
-    let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("Output should be valid JSON");
+    let parsed: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Output should be valid JSON");
     let models = parsed["models"].as_array().unwrap();
     assert_eq!(models.len(), 1);
 
@@ -625,7 +759,13 @@ fn convert_json_to_json() {
 #[test]
 fn convert_preserves_element_names() {
     let out = gw()
-        .args(["convert", "--input", &fixture("json/SmallModel.json"), "--format", "json"])
+        .args([
+            "convert",
+            "--input",
+            &fixture("json/SmallModel.json"),
+            "--format",
+            "json",
+        ])
         .assert()
         .success();
 
@@ -639,10 +779,16 @@ fn convert_preserves_element_names() {
 
 #[test]
 fn convert_unsupported_format() {
-    gw().args(["convert", "--input", &fixture("json/SmallModel.json"), "--format", "xml"])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("Unsupported"));
+    gw().args([
+        "convert",
+        "--input",
+        &fixture("json/SmallModel.json"),
+        "--format",
+        "xml",
+    ])
+    .assert()
+    .failure()
+    .stderr(predicate::str::contains("Unsupported"));
 }
 
 #[test]
@@ -659,12 +805,20 @@ fn convert_nonexistent_file() {
 #[test]
 fn source_generates_from_template() {
     let out = gw()
-        .args(["source", "--input", &fixture("json/SmallModel.json"), "tests/test.template"])
+        .args([
+            "source",
+            "--input",
+            &fixture("json/SmallModel.json"),
+            "tests/test.template",
+        ])
         .assert()
         .success();
 
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
-    assert!(stdout.contains("# Generated methods"), "Should contain header");
+    assert!(
+        stdout.contains("# Generated methods"),
+        "Should contain header"
+    );
     assert!(stdout.contains("# End of file"), "Should contain footer");
     assert!(stdout.contains("def v_VerifySomeAction():"));
     assert!(stdout.contains("def v_VerifySomeOtherAction():"));
@@ -676,7 +830,12 @@ fn source_generates_from_template() {
 #[test]
 fn source_login_model() {
     let out = gw()
-        .args(["source", "--input", &fixture("json/Login.json"), "tests/test.template"])
+        .args([
+            "source",
+            "--input",
+            &fixture("json/Login.json"),
+            "tests/test.template",
+        ])
         .assert()
         .success();
 
@@ -689,9 +848,14 @@ fn source_login_model() {
 
 #[test]
 fn source_missing_template() {
-    gw().args(["source", "--input", &fixture("json/SmallModel.json"), "nonexistent.template"])
-        .assert()
-        .failure();
+    gw().args([
+        "source",
+        "--input",
+        &fixture("json/SmallModel.json"),
+        "nonexistent.template",
+    ])
+    .assert()
+    .failure();
 }
 
 // ---------------------------------------------------------------------------
@@ -703,21 +867,29 @@ fn offline_random_length() {
     let out = gw()
         .args([
             "offline",
-            "-m", &fixture("json/SmallModel.json"), "random(length(10))",
+            "-m",
+            &fixture("json/SmallModel.json"),
+            "random(length(10))",
         ])
         .assert()
         .success();
 
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
     let count = stdout.lines().count();
-    assert_eq!(count, 10, "length(10) should produce exactly 10 steps, got {}", count);
+    assert_eq!(
+        count, 10,
+        "length(10) should produce exactly 10 steps, got {}",
+        count
+    );
 }
 
 #[test]
 fn offline_quick_random() {
     gw().args([
         "offline",
-        "-m", &fixture("json/SmallModel.json"), "quick_random(edge_coverage(100))",
+        "-m",
+        &fixture("json/SmallModel.json"),
+        "quick_random(edge_coverage(100))",
     ])
     .assert()
     .success()
@@ -728,7 +900,9 @@ fn offline_quick_random() {
 fn offline_weighted_random() {
     gw().args([
         "offline",
-        "-m", &fixture("json/SmallModel.json"), "weighted_random(edge_coverage(100))",
+        "-m",
+        &fixture("json/SmallModel.json"),
+        "weighted_random(edge_coverage(100))",
     ])
     .assert()
     .success()
@@ -744,14 +918,20 @@ fn offline_new_york_street_sweeper() {
     let out = gw()
         .args([
             "offline",
-            "-m", &fixture("json/SmallModel.json"), "new_york_street_sweeper()",
+            "-m",
+            &fixture("json/SmallModel.json"),
+            "new_york_street_sweeper()",
         ])
         .assert()
         .success();
 
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
     let lines: Vec<&str> = stdout.lines().collect();
-    assert!(lines.len() >= 8, "Should visit all 4 edges (at least 8 steps), got {}", lines.len());
+    assert!(
+        lines.len() >= 8,
+        "Should visit all 4 edges (at least 8 steps), got {}",
+        lines.len()
+    );
 
     let names: Vec<String> = lines
         .iter()
@@ -759,18 +939,35 @@ fn offline_new_york_street_sweeper() {
         .filter_map(|v| v["currentElementName"].as_str().map(String::from))
         .collect();
 
-    assert!(names.contains(&"e_FirstAction".to_string()), "Should visit e_FirstAction");
-    assert!(names.contains(&"e_AnotherAction".to_string()), "Should visit e_AnotherAction");
-    assert!(names.contains(&"e_SomeOtherAction".to_string()), "Should visit e_SomeOtherAction");
-    assert!(names.contains(&"v_VerifySomeAction".to_string()), "Should visit v_VerifySomeAction");
-    assert!(names.contains(&"v_VerifySomeOtherAction".to_string()), "Should visit v_VerifySomeOtherAction");
+    assert!(
+        names.contains(&"e_FirstAction".to_string()),
+        "Should visit e_FirstAction"
+    );
+    assert!(
+        names.contains(&"e_AnotherAction".to_string()),
+        "Should visit e_AnotherAction"
+    );
+    assert!(
+        names.contains(&"e_SomeOtherAction".to_string()),
+        "Should visit e_SomeOtherAction"
+    );
+    assert!(
+        names.contains(&"v_VerifySomeAction".to_string()),
+        "Should visit v_VerifySomeAction"
+    );
+    assert!(
+        names.contains(&"v_VerifySomeOtherAction".to_string()),
+        "Should visit v_VerifySomeOtherAction"
+    );
 }
 
 #[test]
 fn offline_new_york_street_sweeper_camel_case() {
     gw().args([
         "offline",
-        "-m", &fixture("json/SmallModel.json"), "newyorkstreetsweeper()",
+        "-m",
+        &fixture("json/SmallModel.json"),
+        "newyorkstreetsweeper()",
     ])
     .assert()
     .success()
@@ -785,7 +982,9 @@ fn offline_new_york_street_sweeper_camel_case() {
 fn offline_model_with_no_start_element_fails() {
     gw().args([
         "offline",
-        "-m", &fixture("json/NoStartElement.json"), "random(edge_coverage(100))",
+        "-m",
+        &fixture("json/NoStartElement.json"),
+        "random(edge_coverage(100))",
     ])
     .assert()
     .failure();
@@ -794,8 +993,12 @@ fn offline_model_with_no_start_element_fails() {
 #[test]
 fn offline_model_no_start_with_custom_start_succeeds() {
     gw().args([
-        "offline", "-e", "v_A",
-        "-m", &fixture("json/NoStartElement.json"), "random(edge_coverage(100))",
+        "offline",
+        "-e",
+        "v_A",
+        "-m",
+        &fixture("json/NoStartElement.json"),
+        "random(edge_coverage(100))",
     ])
     .assert()
     .success()
@@ -813,8 +1016,12 @@ fn no_subcommand_shows_help() {
 fn offline_verbose_and_unvisited_combined() {
     let out = gw()
         .args([
-            "offline", "-o", "-u",
-            "-m", &fixture("json/SmallModel.json"), "random(edge_coverage(100))",
+            "offline",
+            "-o",
+            "-u",
+            "-m",
+            &fixture("json/SmallModel.json"),
+            "random(edge_coverage(100))",
         ])
         .assert()
         .success();
@@ -822,5 +1029,8 @@ fn offline_verbose_and_unvisited_combined() {
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
     let first: serde_json::Value = serde_json::from_str(stdout.lines().next().unwrap()).unwrap();
     assert!(first.get("data").is_some(), "Should have data from -o");
-    assert!(first.get("numberOfElements").is_some(), "Should have unvisited info from -u");
+    assert!(
+        first.get("numberOfElements").is_some(),
+        "Should have unvisited info from -u"
+    );
 }

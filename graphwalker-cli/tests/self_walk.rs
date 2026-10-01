@@ -39,7 +39,7 @@
 //! `requirements`, `convert`, `source`, `check`), the cross-cutting
 //! `offline` flags (seed determinism, verbose data, unvisited-element
 //! accounting, explicit start element), a multi-model/shared-state offline
-//! run, both `online` transports (REST and WebSocket), the `--debug` global
+//! run, both `online` transports (REST and WebSocket), the `--log` global
 //! flag, and negative paths (missing model argument, a model the checker
 //! rejects).
 //!
@@ -740,7 +740,7 @@ async fn ws_send(
     serde_json::from_str::<Value>(&resp.into_text().unwrap()).unwrap()
 }
 
-// -- e_debugLogging: `--debug` actually enables debug-level tracing output --
+// -- e_debugLogging: `--log debug` actually enables debug-level tracing output --
 //
 // The flag only flips on a `tracing_subscriber` filter; without observing
 // real log output there'd be no way to tell it from a no-op. Connecting a
@@ -757,12 +757,13 @@ async fn assert_debug_logging() {
             "WEBSOCKET",
             "-p",
             &port.to_string(),
-            "--debug",
+            "--log",
+            "debug",
         ])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("failed to start graphwalker online --debug");
+        .expect("failed to start graphwalker online --log debug");
     wait_for_port(port).await;
 
     let url = format!("ws://127.0.0.1:{port}");
@@ -783,6 +784,6 @@ async fn assert_debug_logging() {
     );
     assert!(
         combined.contains("new websocket connection"),
-        "self-walk: e_debugLogging — --debug must enable debug-level tracing output, got: {combined}"
+        "self-walk: e_debugLogging — --log debug must enable debug-level tracing output, got: {combined}"
     );
 }

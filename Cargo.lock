@@ -669,6 +669,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tokio-tungstenite",
+ "tracing",
  "tracing-subscriber",
 ]
 
@@ -680,6 +681,7 @@ dependencies = [
  "rhai",
  "serde",
  "serde_json",
+ "tracing",
  "uuid",
 ]
 
@@ -688,6 +690,7 @@ name = "graphwalker-dsl"
 version = "1.0.2"
 dependencies = [
  "graphwalker-core",
+ "tracing",
 ]
 
 [[package]]
@@ -699,6 +702,7 @@ dependencies = [
  "quick-xml",
  "serde",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]
@@ -711,6 +715,8 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -721,6 +727,7 @@ dependencies = [
  "graphwalker-dsl",
  "graphwalker-io",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]
@@ -750,6 +757,7 @@ dependencies = [
  "rand 0.8.6",
  "serde",
  "serde_json",
+ "tracing",
  "uuid",
 ]
 
