@@ -73,6 +73,8 @@ pub enum GeneratorKind {
     QuickRandom {
         target: Option<ElementIndex>,
         elements: Vec<ElementIndex>,
+        /// Targets abandoned due to guards; skipped until a target is reached.
+        blocked: Vec<ElementIndex>,
     },
     WeightedRandom,
     AStar,
@@ -103,6 +105,7 @@ impl PathGenerator {
             kind: GeneratorKind::QuickRandom {
                 target: None,
                 elements: Vec::new(),
+                blocked: Vec::new(),
             },
             stop_condition: stop,
         }
@@ -209,29 +212,64 @@ impl PathGenerator {
                 Ok(())
             }
 
-            GeneratorKind::QuickRandom { target, elements } => {
+            GeneratorKind::QuickRandom {
+                target,
+                elements,
+                blocked,
+            } => {
                 if elements.is_empty() {
                     *elements = ctx.model().all_elements();
                     elements.retain(|&e| e != current);
                     ctx.shuffle(elements);
                 }
 
-                if target.is_none() || *target == Some(current) {
-                    if elements.is_empty() {
-                        return Err(GeneratorError::no_path(Some(current)));
-                    }
-                    elements.sort_by_key(|&e| ctx.is_visited(e));
-                    *target = Some(elements[0]);
+                let neighbors = ctx.model().next_elements(current);
+                let available = ctx.filter_elements(&neighbors);
+                if available.is_empty() {
+                    return Err(GeneratorError::no_path(Some(current)));
                 }
 
-                let t = target.unwrap();
-                let next_elem = {
-                    let fw = ctx.floyd_warshall();
-                    let neighbors = ctx.model().next_elements(current);
-                    let filtered = ctx.filter_elements(&neighbors);
-                    astar_next_element(fw, current, t, &filtered)
-                        .ok_or(GeneratorError::no_path_to(current, t))?
+                let fw = ctx.floyd_warshall();
+                let continued = target
+                    .filter(|&t| t != current)
+                    .and_then(|t| shortest_path_step(fw, current, t, &available).map(|n| (t, n)));
+
+                let next_elem = match continued {
+                    Some((_, n)) => n,
+                    None => {
+                        if let Some(t) = target.filter(|&t| t != current) {
+                            tracing::trace!(?current, target = ?t, "path blocked by guard, choosing new target");
+                            blocked.push(t);
+                        }
+                        let mut new_path =
+                            pick_open_target(ctx, current, elements, blocked, &available);
+                        if new_path.is_none() {
+                            // Remaining targets are all blocked; reconsider already visited ones.
+                            *elements = ctx.model().all_elements();
+                            elements.retain(|&e| e != current);
+                            ctx.shuffle(elements);
+                            new_path =
+                                pick_open_target(ctx, current, elements, blocked, &available);
+                        }
+                        match new_path {
+                            Some((t, n)) => {
+                                *target = Some(t);
+                                n
+                            }
+                            None => {
+                                // Every remaining target is blocked; take a random open step and retry later.
+                                *target = None;
+                                blocked.clear();
+                                available[ctx.gen_usize(available.len())]
+                            }
+                        }
+                    }
                 };
+                // Retarget eagerly: a shared-state portal may leave the model at the target.
+                if *target == Some(next_elem) {
+                    *target = None;
+                    blocked.clear();
+                }
                 elements.retain(|&e| e != next_elem);
                 ctx.set_current_element(next_elem);
                 Ok(())
@@ -388,6 +426,38 @@ impl PathGenerator {
             }
         }
     }
+}
+
+/// Returns an available neighbor lying on a shortest (guard-agnostic) path to `target`,
+/// or `None` if every such step is blocked or `target` is unreachable.
+fn shortest_path_step(
+    fw: &algorithm::FloydWarshall,
+    current: ElementIndex,
+    target: ElementIndex,
+    available: &[ElementIndex],
+) -> Option<ElementIndex> {
+    let distance = fw.shortest_distance(current, target);
+    available
+        .iter()
+        .copied()
+        .find(|&n| fw.shortest_distance(n, target) + 1 == distance)
+}
+
+/// Picks the first non-blocked candidate (unvisited first) whose path starts with an open step.
+fn pick_open_target(
+    ctx: &ExecutionContext,
+    current: ElementIndex,
+    elements: &mut [ElementIndex],
+    blocked: &[ElementIndex],
+    available: &[ElementIndex],
+) -> Option<(ElementIndex, ElementIndex)> {
+    elements.sort_by_key(|&e| ctx.is_visited(e));
+    let fw = ctx.floyd_warshall();
+    elements
+        .iter()
+        .copied()
+        .filter(|&c| c != current && !blocked.contains(&c))
+        .find_map(|c| shortest_path_step(fw, current, c, available).map(|n| (c, n)))
 }
 
 fn weighted_edge_selection(

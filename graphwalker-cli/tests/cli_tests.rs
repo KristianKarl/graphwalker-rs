@@ -296,6 +296,16 @@ fn offline_login_model_with_guards_and_actions() {
 }
 
 #[test]
+fn offline_multi_model_quick_random_with_cross_model_guards_terminates() {
+    for seed in ["7", "8", "42"] {
+        gw().args(["offline", "-s", seed, "-g", &fixture("json/frontoffice.json")])
+            .timeout(std::time::Duration::from_secs(30))
+            .assert()
+            .success();
+    }
+}
+
+#[test]
 fn offline_multi_model_shared_state() {
     let out = gw()
         .args(["offline", "-g", &fixture("json/MultiModelSharedState.json")])
