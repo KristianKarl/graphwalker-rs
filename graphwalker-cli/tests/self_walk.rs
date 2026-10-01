@@ -257,7 +257,7 @@ fn assert_offline_basic() {
 // -- e_offlineSeedDeterminism: identical seeds reproduce, different seeds diverge --
 
 fn assert_offline_seed_determinism() {
-    let run = |seed: u64| -> String {
+    let run = |seed: u64| -> Vec<Value> {
         let out = gw()
             .args([
                 "offline",
@@ -269,7 +269,15 @@ fn assert_offline_seed_determinism() {
             ])
             .assert()
             .success();
-        String::from_utf8(out.get_output().stdout.clone()).unwrap()
+        String::from_utf8(out.get_output().stdout.clone())
+            .unwrap()
+            .lines()
+            .map(|line| {
+                let mut value: Value = serde_json::from_str(line).unwrap();
+                value.as_object_mut().unwrap().remove("modelId");
+                value
+            })
+            .collect()
     };
 
     let first = run(1);

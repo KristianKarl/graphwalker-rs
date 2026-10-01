@@ -92,11 +92,15 @@ fn offline_small_model_edge_coverage() {
         .collect();
     assert!(elements.contains(&("e_FirstAction".to_string(), "e0".to_string())));
     assert!(elements.contains(&("v_VerifySomeAction".to_string(), "n0".to_string())));
+
+    let first: serde_json::Value = serde_json::from_str(lines[0]).unwrap();
+    assert!(first["modelId"].as_str().is_some_and(|id| !id.is_empty()));
+    assert_eq!(first["modelName"], "Small model");
 }
 
 #[test]
 fn offline_with_seed_is_deterministic() {
-    let run = |seed: u64| -> String {
+    let run = |seed: u64| -> Vec<serde_json::Value> {
         let out = gw()
             .args([
                 "offline", "-s", &seed.to_string(),
@@ -104,7 +108,15 @@ fn offline_with_seed_is_deterministic() {
             ])
             .assert()
             .success();
-        String::from_utf8(out.get_output().stdout.clone()).unwrap()
+        String::from_utf8(out.get_output().stdout.clone())
+            .unwrap()
+            .lines()
+            .map(|line| {
+                let mut value: serde_json::Value = serde_json::from_str(line).unwrap();
+                value.as_object_mut().unwrap().remove("modelId");
+                value
+            })
+            .collect()
     };
 
     let first = run(42);

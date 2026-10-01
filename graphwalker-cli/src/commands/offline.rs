@@ -76,6 +76,8 @@ pub fn run(args: Args) -> CliResult {
         };
 
         let mut json = serde_json::json!({
+            "modelId": model.id(),
+            "modelName": model.name(),
             "currentElementName": name,
             "currentElementId": id,
         });
