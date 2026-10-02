@@ -28,6 +28,8 @@ MCP client  <-- stdio -->  graphwalker-mcp
      +-- browser/API/test adapter --> system under test
 ```
 
+MCP protocol messages use stdin and stdout. Server logs and diagnostic messages are written to stderr so they do not interfere with protocol communication. When an MCP client launches the server, leave stdout connected to the client; redirecting it would break protocol communication. Capture or display stderr separately using the client's process logging options.
+
 ## Install
 
 GraphWalker requires Rust 1.88 or later.

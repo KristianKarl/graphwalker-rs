@@ -18,6 +18,16 @@ graphwalker [--log <LEVEL>] <subcommand>
 | `--help` | Show help |
 | `--version` | Show version |
 
+Log messages are written to stderr. Command output, such as the generated offline path, is written to stdout. Redirect the streams independently when needed:
+
+```bash
+# Save generated JSON and logs separately
+graphwalker --log trace offline --gw model.json >stdout.txt 2>stderr.txt
+
+# Keep generated JSON on the terminal and save logs to a file
+graphwalker --log trace offline --gw model.json 2>stderr.txt
+```
+
 ---
 
 ## offline

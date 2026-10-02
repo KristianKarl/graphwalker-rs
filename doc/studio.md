@@ -21,6 +21,16 @@ graphwalker-studio [OPTIONS]
 | Static directory | | `--static-dir` | `static` | Directory containing the frontend files |
 | Logging verbosity | | `--log <LEVEL>` | `error` | `error`, `warn`, `info`, `debug`, or `trace` |
 
+Log messages are written to stderr. Command output, such as the generated offline path, is written to stdout. Redirect the streams independently when needed:
+
+```bash
+# Save generated JSON and logs separately
+graphwalker-studio --log trace >stdout.txt 2>stderr.txt
+
+# Keep generated JSON on the terminal and save logs to a file
+graphwalker-studio --log trace 2>stderr.txt
+```
+
 After starting, open [http://localhost:9090](http://localhost:9090) in your browser.
 
 ---
