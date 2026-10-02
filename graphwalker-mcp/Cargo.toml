@@ -1,6 +1,6 @@
 [package]
 name = "graphwalker-mcp"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2021"
 rust-version.workspace = true
 description = "Model Context Protocol server for GraphWalker"
@@ -17,8 +17,8 @@ name = "graphwalker-mcp"
 path = "src/main.rs"
 
 [dependencies]
-graphwalker-io = { version = "1.0.2", path = "../graphwalker-io" }
-graphwalker-service = { version = "1.0.2", path = "../graphwalker-service" }
+graphwalker-io = { version = "1.0.3", path = "../graphwalker-io" }
+graphwalker-service = { version = "1.0.3", path = "../graphwalker-service" }
 rmcp = { version = "=3.3.0", default-features = false, features = ["macros", "server", "transport-io"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
