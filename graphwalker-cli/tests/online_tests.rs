@@ -79,9 +79,7 @@ fn small_model_json() -> String {
 
 async fn ws_connect(
     port: u16,
-) -> tokio_tungstenite::WebSocketStream<
-    tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
-> {
+) -> tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>> {
     let url = format!("ws://127.0.0.1:{}", port);
     let (ws, _) = tokio_tungstenite::connect_async(&url)
         .await
@@ -248,7 +246,10 @@ async fn rest_full_traversal() {
         }
     }
 
-    assert!(!visited.is_empty(), "Should have visited at least one element");
+    assert!(
+        !visited.is_empty(),
+        "Should have visited at least one element"
+    );
     assert!(visited.contains(&"e_FirstAction".to_string()));
     assert!(visited.contains(&"v_VerifySomeAction".to_string()));
     assert!(visited.contains(&"v_VerifySomeOtherAction".to_string()));
@@ -319,7 +320,10 @@ async fn rest_set_data() {
         .await
         .unwrap();
     let data = resp["data"].as_str().unwrap();
-    assert!(data.contains("x"), "Data should contain the variable we set");
+    assert!(
+        data.contains("x"),
+        "Data should contain the variable we set"
+    );
 }
 
 #[tokio::test]
@@ -436,7 +440,10 @@ async fn ws_start_has_next_get_next() {
     let name = resp["name"]
         .as_str()
         .or_else(|| resp["currentElementName"].as_str());
-    assert!(name.is_some(), "Response should contain element name: {resp}");
+    assert!(
+        name.is_some(),
+        "Response should contain element name: {resp}"
+    );
 }
 
 #[tokio::test]
@@ -664,8 +671,14 @@ async fn ws_subscribe_session() {
     )
     .await;
     assert_eq!(resp["success"], true);
-    assert!(resp.get("models").is_some(), "Subscribe should return models");
-    assert!(resp.get("elements").is_some(), "Subscribe should return elements snapshot");
+    assert!(
+        resp.get("models").is_some(),
+        "Subscribe should return models"
+    );
+    assert!(
+        resp.get("elements").is_some(),
+        "Subscribe should return elements snapshot"
+    );
     assert!(resp.get("seed").is_some(), "Subscribe should return seed");
 }
 
@@ -804,7 +817,10 @@ async fn rest_seed_different_seeds_diverge() {
     let run_a = rest_run_traversal(port_a).await;
     let run_b = rest_run_traversal(port_b).await;
 
-    assert_ne!(run_a, run_b, "Different seeds should produce different traversals");
+    assert_ne!(
+        run_a, run_b,
+        "Different seeds should produce different traversals"
+    );
 }
 
 #[tokio::test]
@@ -826,7 +842,10 @@ async fn rest_seed_load_returns_seed() {
         .await
         .unwrap();
     assert_eq!(resp["result"], "ok");
-    assert_eq!(resp["seed"], 12345, "Load response should echo back the seed");
+    assert_eq!(
+        resp["seed"], 12345,
+        "Load response should echo back the seed"
+    );
 }
 
 #[tokio::test]

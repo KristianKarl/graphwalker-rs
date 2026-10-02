@@ -7,7 +7,7 @@ use axum::http::{header, HeaderValue, StatusCode, Uri};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::get;
 use axum::Router;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use graphwalker_restful::session::SessionManager;
 use include_dir::{include_dir, Dir};
 use tower_http::services::ServeDir;
@@ -33,22 +33,43 @@ struct Args {
     #[arg(long = "static-dir", default_value = "static")]
     static_dir: PathBuf,
 
-    /// Enable debug logging
-    #[arg(long)]
-    debug: bool,
+    /// Set the logging verbosity
+    #[arg(long, value_enum, default_value = "error")]
+    log: LogLevel,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+#[value(rename_all = "lower")]
+enum LogLevel {
+    Error,
+    Warn,
+    Info,
+    Debug,
+    Trace,
+}
+
+impl From<LogLevel> for tracing_subscriber::filter::LevelFilter {
+    fn from(level: LogLevel) -> Self {
+        match level {
+            LogLevel::Error => Self::ERROR,
+            LogLevel::Warn => Self::WARN,
+            LogLevel::Info => Self::INFO,
+            LogLevel::Debug => Self::DEBUG,
+            LogLevel::Trace => Self::TRACE,
+        }
+    }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    if args.debug {
-        tracing_subscriber::fmt()
-            .with_env_filter("graphwalker_restful=debug,graphwalker_studio=debug")
-            .with_target(true)
-            .init();
-        tracing::debug!("debug logging enabled");
-    }
+    tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .with_max_level(tracing_subscriber::filter::LevelFilter::from(args.log))
+        .with_target(true)
+        .init();
+    tracing::info!(log_level = ?args.log, "starting GraphWalker Studio");
 
     let mut static_dir = args.static_dir.is_dir().then_some(args.static_dir);
     if static_dir.is_none() {
@@ -70,12 +91,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ws_port = args.websocket_port;
     let ws_handle = tokio::spawn(async move {
         if let Err(e) = run_websocket_server(ws_port).await {
+            tracing::error!(error = %e, "WebSocket server stopped with an error");
             eprintln!("WebSocket server error: {}", e);
         }
     });
 
     let http_handle = tokio::spawn(async move {
         if let Err(e) = run_http_server(args.browser_port, ws_port, static_dir.as_deref()).await {
+            tracing::error!(error = %e, "HTTP server stopped with an error");
             eprintln!("HTTP server error: {}", e);
         }
     });
@@ -109,7 +132,11 @@ async fn run_http_server(
     static_dir: Option<&Path>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    let listener = tokio::net::TcpListener::bind(addr).await?;
+    let listener = tokio::net::TcpListener::bind(addr).await.map_err(|error| {
+        tracing::error!(%addr, %error, "failed to bind Studio HTTP server");
+        error
+    })?;
+    tracing::info!(%addr, ?static_dir, "Studio HTTP server listening");
 
     if let Some(static_dir) = static_dir {
         let template = std::fs::read_to_string(static_dir.join("index.html"))?;
@@ -184,7 +211,11 @@ async fn run_websocket_server(port: u16) -> Result<(), Box<dyn std::error::Error
         .route("/", get(ws_upgrade_handler))
         .with_state(session_mgr);
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    let listener = tokio::net::TcpListener::bind(addr).await?;
+    let listener = tokio::net::TcpListener::bind(addr).await.map_err(|error| {
+        tracing::error!(%addr, %error, "failed to bind Studio WebSocket server");
+        error
+    })?;
+    tracing::info!(%addr, "Studio WebSocket server listening");
     axum::serve(listener, app).await?;
     Ok(())
 }

@@ -652,7 +652,7 @@ dependencies = [
 
 [[package]]
 name = "graphwalker"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -669,41 +669,45 @@ dependencies = [
  "serde_json",
  "tokio",
  "tokio-tungstenite",
+ "tracing",
  "tracing-subscriber",
 ]
 
 [[package]]
 name = "graphwalker-core"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "rand 0.8.6",
  "rhai",
  "serde",
  "serde_json",
+ "tracing",
  "uuid",
 ]
 
 [[package]]
 name = "graphwalker-dsl"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "graphwalker-core",
+ "tracing",
 ]
 
 [[package]]
 name = "graphwalker-io"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "graphwalker-core",
  "graphwalker-dsl",
  "quick-xml",
  "serde",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]
 name = "graphwalker-mcp"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "graphwalker-io",
  "graphwalker-service",
@@ -711,21 +715,24 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
 name = "graphwalker-model-checker"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "graphwalker-core",
  "graphwalker-dsl",
  "graphwalker-io",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]
 name = "graphwalker-restful"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "axum",
  "futures",
@@ -741,7 +748,7 @@ dependencies = [
 
 [[package]]
 name = "graphwalker-service"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "graphwalker-core",
  "graphwalker-dsl",
@@ -750,12 +757,13 @@ dependencies = [
  "rand 0.8.6",
  "serde",
  "serde_json",
+ "tracing",
  "uuid",
 ]
 
 [[package]]
 name = "graphwalker-studio"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "assert_cmd",
  "axum",

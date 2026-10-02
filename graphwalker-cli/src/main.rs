@@ -2,7 +2,7 @@ mod commands;
 
 use std::process;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]
 #[command(
@@ -11,12 +11,34 @@ use clap::{Parser, Subcommand};
     about = "Model-based testing tool"
 )]
 struct Cli {
-    /// Enable debug logging
-    #[arg(long, global = true)]
-    debug: bool,
+    /// Set the logging verbosity
+    #[arg(long, global = true, value_enum, default_value = "error")]
+    log: LogLevel,
 
     #[command(subcommand)]
     command: Command,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+#[value(rename_all = "lower")]
+enum LogLevel {
+    Error,
+    Warn,
+    Info,
+    Debug,
+    Trace,
+}
+
+impl From<LogLevel> for tracing_subscriber::filter::LevelFilter {
+    fn from(level: LogLevel) -> Self {
+        match level {
+            LogLevel::Error => Self::ERROR,
+            LogLevel::Warn => Self::WARN,
+            LogLevel::Info => Self::INFO,
+            LogLevel::Debug => Self::DEBUG,
+            LogLevel::Trace => Self::TRACE,
+        }
+    }
 }
 
 #[derive(Subcommand)]
@@ -40,12 +62,22 @@ enum Command {
 fn main() {
     let cli = Cli::parse();
 
-    if cli.debug {
-        tracing_subscriber::fmt()
-            .with_env_filter("graphwalker_restful=debug,graphwalker=debug")
-            .with_target(true)
-            .init();
-    }
+    tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .with_max_level(tracing_subscriber::filter::LevelFilter::from(cli.log))
+        .with_target(true)
+        .init();
+
+    let command_name = match &cli.command {
+        Command::Offline(_) => "offline",
+        Command::Online(_) => "online",
+        Command::Methods(_) => "methods",
+        Command::Requirements(_) => "requirements",
+        Command::Convert(_) => "convert",
+        Command::Source(_) => "source",
+        Command::Check(_) => "check",
+    };
+    tracing::info!(command = command_name, "running CLI command");
 
     let result = match cli.command {
         Command::Offline(args) => commands::offline::run(args),
@@ -58,6 +90,7 @@ fn main() {
     };
 
     if let Err(e) = result {
+        tracing::error!(error = %e, "CLI command failed");
         eprintln!("{}", e);
         process::exit(1);
     }

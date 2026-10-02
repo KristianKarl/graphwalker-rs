@@ -52,12 +52,16 @@ pub struct ModelContext {
 }
 
 pub fn read_model(path: &Path) -> Result<Vec<ModelContext>, IoError> {
+    tracing::info!(path = %path.display(), "loading model");
     match path.extension().and_then(|e| e.to_str()) {
         Some("json") => json::read_json_file(path),
         Some("graphml") => graphml::read_graphml_file(path),
-        _ => Err(IoError::Io(format!(
-            "Unsupported file extension: {}",
-            path.display()
-        ))),
+        _ => {
+            tracing::warn!(path = %path.display(), "unsupported model file extension");
+            Err(IoError::Io(format!(
+                "Unsupported file extension: {}",
+                path.display()
+            )))
+        }
     }
 }

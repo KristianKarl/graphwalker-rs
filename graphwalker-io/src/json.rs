@@ -427,10 +427,15 @@ pub fn read_json_string(json: &str) -> Result<Vec<ModelContext>, IoError> {
         contexts.push(ModelContext {
             model,
             generator: jm.generator.clone(),
-            start_element_id: jm.start_element_id.as_deref().filter(|s| !s.is_empty()).map(String::from),
+            start_element_id: jm
+                .start_element_id
+                .as_deref()
+                .filter(|s| !s.is_empty())
+                .map(String::from),
         });
     }
 
+    tracing::debug!(model_count = contexts.len(), "parsed JSON model collection");
     Ok(contexts)
 }
 
@@ -453,6 +458,7 @@ fn describe_json_error(json: &str, err: &serde_json::Error) -> String {
 }
 
 pub fn read_json_file(path: &Path) -> Result<Vec<ModelContext>, IoError> {
+    tracing::debug!(path = %path.display(), "reading JSON model file");
     let content = std::fs::read_to_string(path)?;
     read_json_string(&content)
 }
@@ -479,6 +485,7 @@ pub fn write_json_string(contexts: &[ModelContext]) -> Result<String, IoError> {
 }
 
 pub fn write_json_file(contexts: &[ModelContext], path: &Path) -> Result<(), IoError> {
+    tracing::debug!(path = %path.display(), model_count = contexts.len(), "writing JSON model file");
     let json = write_json_string(contexts)?;
     std::fs::write(path, json)?;
     Ok(())

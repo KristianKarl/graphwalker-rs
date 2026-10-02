@@ -140,6 +140,84 @@ fn quick_random_path_covers_all_edges() {
     }
 }
 
+#[test]
+fn quick_random_path_replans_when_path_blocked_by_guard() {
+    let v_a = VertexBuilder::new().id("va").name("A");
+    let v_b = VertexBuilder::new().id("vb").name("B");
+    let v_c = VertexBuilder::new().id("vc").name("C");
+    let v_d = VertexBuilder::new().id("vd").name("D");
+
+    let mut mb = ModelBuilder::new();
+    mb.add_edge(
+        EdgeBuilder::new()
+            .id("e_ab")
+            .source_vertex(v_a.clone())
+            .target_vertex(v_b.clone())
+            .guard(crate::model::Guard::new("x > 100")),
+    );
+    mb.add_edge(
+        EdgeBuilder::new()
+            .id("e_ba")
+            .source_vertex(v_b.clone())
+            .target_vertex(v_a.clone()),
+    );
+    mb.add_edge(
+        EdgeBuilder::new()
+            .id("e_ac")
+            .source_vertex(v_a.clone())
+            .target_vertex(v_c.clone()),
+    );
+    mb.add_edge(
+        EdgeBuilder::new()
+            .id("e_ca")
+            .source_vertex(v_c.clone())
+            .target_vertex(v_a.clone()),
+    );
+    mb.add_edge(
+        EdgeBuilder::new()
+            .id("e_cd")
+            .source_vertex(v_c.clone())
+            .target_vertex(v_d.clone()),
+    );
+    mb.add_edge(
+        EdgeBuilder::new()
+            .id("e_da")
+            .source_vertex(v_d.clone())
+            .target_vertex(v_a.clone()),
+    );
+    let model = mb.build();
+    let id = |s: &str| model.element_by_id(s).unwrap();
+    let (va, vb, e_ab, e_cd, e_da) = (id("va"), id("vb"), id("e_ab"), id("e_cd"), id("e_da"));
+
+    let mut ctx = ExecutionContext::new_with_seed(model, 42);
+    ctx.execute_action(&crate::model::Action::new("let x = 0"))
+        .unwrap();
+    ctx.set_current_element(va);
+
+    // Start with a target whose only path is blocked by the guard on e_AB.
+    let mut gen = PathGenerator {
+        kind: GeneratorKind::QuickRandom {
+            target: Some(vb),
+            elements: Vec::new(),
+            blocked: Vec::new(),
+        },
+        stop_condition: StopCondition::Length(40),
+    };
+
+    gen.get_next_step(&mut ctx).unwrap();
+    if let GeneratorKind::QuickRandom { target, .. } = &gen.kind {
+        assert_ne!(*target, Some(vb), "blocked target should be replaced");
+    }
+
+    while gen.has_next_step(&ctx) {
+        gen.get_next_step(&mut ctx).unwrap();
+    }
+
+    assert!(!ctx.is_visited(e_ab));
+    assert!(ctx.is_visited(e_cd));
+    assert!(ctx.is_visited(e_da));
+}
+
 // ---------------------------------------------------------------------------
 // WeightedRandomPath
 // ---------------------------------------------------------------------------

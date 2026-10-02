@@ -299,6 +299,7 @@ impl DraftRegistry {
             })),
         );
 
+        tracing::info!(draft_id = %draft_id, model_id = %model_id, "model draft created");
         Ok(DraftCreated {
             draft_id,
             model_id,

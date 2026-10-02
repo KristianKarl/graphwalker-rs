@@ -36,6 +36,7 @@ async fn send_command(
 }
 
 pub async fn load(State(state): State<RestState>, body: String) -> (StatusCode, Json<Value>) {
+    tracing::debug!(body_length = body.len(), "REST load request");
     send_command(&state.machine_tx, |reply| Command::Load {
         json_body: body,
         seed: state.default_seed,
@@ -50,6 +51,7 @@ pub async fn has_next(State(state): State<RestState>) -> (StatusCode, Json<Value
 }
 
 pub async fn get_next(State(state): State<RestState>) -> (StatusCode, Json<Value>) {
+    tracing::trace!("REST next-step request");
     send_command(&state.machine_tx, |reply| Command::GetNext {
         verbose: false,
         reply,
@@ -65,10 +67,16 @@ pub async fn set_data(
     State(state): State<RestState>,
     Path(script): Path<String>,
 ) -> (StatusCode, Json<Value>) {
-    send_command(&state.machine_tx, |reply| Command::SetData { script, reply }).await
+    tracing::debug!(script_length = script.len(), "REST set-data request");
+    send_command(&state.machine_tx, |reply| Command::SetData {
+        script,
+        reply,
+    })
+    .await
 }
 
 pub async fn restart(State(state): State<RestState>) -> (StatusCode, Json<Value>) {
+    tracing::debug!("REST restart request");
     send_command(&state.machine_tx, |reply| Command::Restart { reply }).await
 }
 

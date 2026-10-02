@@ -1,6 +1,6 @@
 [package]
 name = "graphwalker"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2021"
 rust-version.workspace = true
 license = "MIT"
@@ -18,17 +18,18 @@ name = "graphwalker"
 path = "src/main.rs"
 
 [dependencies]
-graphwalker-core = { version = "1.0.2", path = "../graphwalker-core" }
-graphwalker-dsl = { version = "1.0.2", path = "../graphwalker-dsl" }
-graphwalker-io = { version = "1.0.2", path = "../graphwalker-io" }
-graphwalker-model-checker = { version = "1.0.2", path = "../graphwalker-model-checker" }
-graphwalker-restful = { version = "1.0.2", path = "../graphwalker-restful" }
+graphwalker-core = { version = "1.0.3", path = "../graphwalker-core" }
+graphwalker-dsl = { version = "1.0.3", path = "../graphwalker-dsl" }
+graphwalker-io = { version = "1.0.3", path = "../graphwalker-io" }
+graphwalker-model-checker = { version = "1.0.3", path = "../graphwalker-model-checker" }
+graphwalker-restful = { version = "1.0.3", path = "../graphwalker-restful" }
 rand = "0.8"
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
 
 [dev-dependencies]
 assert_cmd = "2"

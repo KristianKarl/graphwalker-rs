@@ -26,6 +26,7 @@ pub struct Args {
 }
 
 pub fn run(args: Args) -> CliResult {
+    tracing::info!(service = %args.service, port = args.port, "starting online service");
     let seed = if args.seed == 0 {
         None
     } else {

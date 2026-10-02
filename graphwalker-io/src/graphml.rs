@@ -23,6 +23,7 @@ struct RawEdge {
 }
 
 pub fn read_graphml_string(xml: &str) -> Result<Vec<ModelContext>, IoError> {
+    tracing::trace!(input_length = xml.len(), "parsing GraphML model");
     let mut reader = Reader::from_str(xml);
 
     let mut node_map: HashMap<String, RawNode> = HashMap::new();
@@ -141,6 +142,11 @@ pub fn read_graphml_string(xml: &str) -> Result<Vec<ModelContext>, IoError> {
         buf.clear();
     }
 
+    tracing::debug!(
+        vertex_count = node_map.len(),
+        edge_count = edge_map.len(),
+        "parsed GraphML elements"
+    );
     build_model_from_raw(node_map, edge_map)
 }
 
@@ -370,6 +376,7 @@ fn extract_attr(e: &quick_xml::events::BytesStart, attr_name: &[u8]) -> Option<S
 }
 
 pub fn read_graphml_file(path: &Path) -> Result<Vec<ModelContext>, IoError> {
+    tracing::debug!(path = %path.display(), "reading GraphML model file");
     let content = std::fs::read_to_string(path)?;
     read_graphml_string(&content)
 }

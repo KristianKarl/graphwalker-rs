@@ -19,7 +19,17 @@ graphwalker-studio [OPTIONS]
 | Browser port | `-b` | `--browser-port` | `9090` | HTTP port for the web UI |
 | WebSocket port | `-w` | `--websocket-port` | `9999` | WebSocket port for the execution engine |
 | Static directory | | `--static-dir` | `static` | Directory containing the frontend files |
-| Debug logging | | `--debug` | off | Enable debug output |
+| Logging verbosity | | `--log <LEVEL>` | `error` | `error`, `warn`, `info`, `debug`, or `trace` |
+
+Log messages are written to stderr. Command output, such as the generated offline path, is written to stdout. Redirect the streams independently when needed:
+
+```bash
+# Save generated JSON and logs separately
+graphwalker-studio --log trace >stdout.txt 2>stderr.txt
+
+# Keep generated JSON on the terminal and save logs to a file
+graphwalker-studio --log trace 2>stderr.txt
+```
 
 After starting, open [http://localhost:9090](http://localhost:9090) in your browser.
 

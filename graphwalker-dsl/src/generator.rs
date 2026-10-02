@@ -286,6 +286,7 @@ impl<'a> Parser<'a> {
 /// multiple generators separated by whitespace, which produce a `CombinedPath`.
 /// Stop conditions can be combined with AND (`&&`/`and`) or OR (`||`/`or`).
 pub fn parse_generator(input: &str) -> Result<PathGenerator, DslError> {
+    tracing::trace!(input_length = input.len(), "parsing generator expression");
     let mut parser = Parser::new(input);
 
     let first = parser.parse_single_generator()?;

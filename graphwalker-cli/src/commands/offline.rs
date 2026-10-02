@@ -36,6 +36,11 @@ pub struct Args {
 }
 
 pub fn run(args: Args) -> CliResult {
+    tracing::debug!(
+        model_argument_count = args.model.len(),
+        has_embedded_model = args.gw.is_some(),
+        "preparing offline generation"
+    );
     if args.model.is_empty() && args.gw.is_none() {
         return Err("Either --model (-m) or --gw (-g) is required for offline mode".into());
     }
@@ -58,12 +63,15 @@ pub fn run(args: Args) -> CliResult {
     let entries = prepare_entries_with_seed(contexts, Some(seed))?;
     let mut machine = Machine::new_with_seed(entries, seed)?;
     machine.set_record_path(false);
+    tracing::info!(seed, "offline generation started");
 
     let stdout = std::io::stdout();
     let mut out = std::io::BufWriter::new(stdout.lock());
 
+    let mut step_count = 0;
     while machine.has_next_step() {
         machine.get_next_step()?;
+        step_count += 1;
 
         let ctx_idx = machine.current_context_index();
         let ctx = machine.context(ctx_idx);
@@ -76,6 +84,8 @@ pub fn run(args: Args) -> CliResult {
         };
 
         let mut json = serde_json::json!({
+            "modelId": model.id(),
+            "modelName": model.name(),
             "currentElementName": name,
             "currentElementId": id,
         });
@@ -112,6 +122,7 @@ pub fn run(args: Args) -> CliResult {
         writeln!(out, "{}", json)?;
     }
 
+    tracing::info!(step_count, "offline generation completed");
     Ok(())
 }
 
