@@ -1,6 +1,10 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
 
+#[allow(dead_code)]
+#[path = "../build.rs"]
+mod build_script;
+
 fn gw() -> Command {
     Command::cargo_bin("graphwalker").unwrap()
 }
