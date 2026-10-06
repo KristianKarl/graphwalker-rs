@@ -20,9 +20,6 @@ const themes = {
     selectedNodeBg: '#1e1e3a',
     visitedNodeBg: '#1a3a2a',
     visitedBorder: '#22c55e',
-    currentNodeBg: '#22c55e',
-    currentNodeText: '#0a0a0f',
-    currentBorder: '#4ade80',
     startBorder: '#22c55e',
     breakpointBorder: '#ef4444',
     sharedBorder: '#f59e0b',
@@ -42,9 +39,6 @@ const themes = {
     selectedNodeBg: '#e8e8f8',
     visitedNodeBg: '#d4edda',
     visitedBorder: '#22c55e',
-    currentNodeBg: '#22c55e',
-    currentNodeText: '#ffffff',
-    currentBorder: '#16a34a',
     startBorder: '#22c55e',
     breakpointBorder: '#ef4444',
     sharedBorder: '#f59e0b',
@@ -89,14 +83,6 @@ function buildStylesheet(t: typeof themes.dark): any[] {
       style: { 'background-color': t.visitedNodeBg, 'border-color': t.visitedBorder },
     },
     {
-      selector: 'node.current',
-      style: {
-        'background-color': t.currentNodeBg,
-        'border-color': t.currentBorder,
-        'border-width': 3,
-      },
-    },
-    {
       selector: 'node.breakpoint',
       style: { 'border-color': t.breakpointBorder, 'border-width': 3, 'border-style': 'dashed' },
     },
@@ -107,6 +93,17 @@ function buildStylesheet(t: typeof themes.dark): any[] {
     {
       selector: 'node:selected',
       style: { 'border-color': t.selectedBorder, 'border-width': 3, 'background-color': t.selectedNodeBg },
+    },
+    {
+      selector: 'node.current',
+      style: {
+        'background-color': t.visitedNodeBg,
+        'border-color': t.visitedBorder,
+        'border-width': 4,
+        'overlay-color': t.visitedBorder,
+        'overlay-opacity': 0,
+        'overlay-padding': 3,
+      },
     },
     {
       selector: 'edge',
@@ -142,12 +139,19 @@ function buildStylesheet(t: typeof themes.dark): any[] {
       style: { 'line-color': t.visitedBorder, 'target-arrow-color': t.visitedBorder },
     },
     {
-      selector: 'edge.current',
-      style: { 'line-color': t.currentBorder, 'target-arrow-color': t.currentBorder, width: 3 },
-    },
-    {
       selector: 'edge:selected',
       style: { 'line-color': t.selectedBorder, 'target-arrow-color': t.selectedBorder, width: 3 },
+    },
+    {
+      selector: 'edge.current',
+      style: {
+        'line-color': t.visitedBorder,
+        'target-arrow-color': t.visitedBorder,
+        width: 4,
+        'overlay-color': t.visitedBorder,
+        'overlay-opacity': 0,
+        'overlay-padding': 3,
+      },
     },
     {
       selector: ':loop',
@@ -223,6 +227,7 @@ export default function GraphEditor({ model, modelIndex }: Props) {
   const currentElementId = useExecutionStore((s) => s.currentElement[model.id]);
   const modelData = useExecutionStore((s) => s.modelData[model.id]);
   const breakpoints = useExecutionStore((s) => s.breakpoints);
+  const paused = useExecutionStore((s) => s.paused);
   const stepCount = useExecutionStore((s) => s.stepCount);
   const allVisited = useExecutionStore((s) => s.visited);
   const allModels = useModelStore((s) => s.models);
@@ -470,6 +475,36 @@ export default function GraphEditor({ model, modelIndex }: Props) {
       cy.getElementById(currentElementId).addClass('current');
     }
   }, [modelVisited, currentElementId]);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    const current = cy?.$('.current');
+    if (!current?.length || !paused || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
+    current.style('overlay-color', themeColors.visitedBorder);
+    current.style('overlay-padding', 3);
+    current.style('overlay-opacity', 0.1);
+
+    const pulse = (glow: boolean) => {
+      current.animate({
+        style: {
+          'overlay-padding': glow ? 8 : 3,
+          'overlay-opacity': glow ? 0.4 : 0.1,
+        },
+        duration: 1400,
+        easing: 'ease-in-out-cubic',
+        complete: () => pulse(!glow),
+      });
+    };
+    pulse(true);
+
+    return () => {
+      current.stop(true, false);
+      current.removeStyle('overlay-color overlay-padding overlay-opacity');
+    };
+  }, [currentElementId, paused, themeColors.visitedBorder]);
 
   useEffect(() => {
     const cy = cyRef.current;
