@@ -39,6 +39,7 @@ export default function EditorTabs({ models, selectedIndex, onSelect, onClose, o
               aria-selected={i === selectedIndex}
               aria-controls={`model-panel-${m.id}`}
               onClick={() => onSelect(i)}
+              title={`${m.name}${i === selectedIndex ? ' (active model)' : '. Click to edit this model'}${hasVisited ? '. This model has execution progress.' : ''}`}
               className={`flex items-center gap-2 px-3 h-full text-sm transition-colors select-none whitespace-nowrap ${
                 i === selectedIndex
                   ? 'border-b-2 border-b-primary'
@@ -53,7 +54,7 @@ export default function EditorTabs({ models, selectedIndex, onSelect, onClose, o
             <button
               type="button"
               aria-label={`Close ${m.name}`}
-              title={`Close ${m.name}`}
+              title={`Close the ${m.name} tab. This removes it from the current workspace.`}
               onClick={(e) => { e.stopPropagation(); onClose(i); }}
               className="hover:text-danger rounded p-0.5 transition-colors"
             >
@@ -67,7 +68,7 @@ export default function EditorTabs({ models, selectedIndex, onSelect, onClose, o
         aria-label="New model"
         onClick={onAdd}
         className="flex items-center justify-center w-9 h-full text-text-muted hover:text-text hover:bg-surface-alt transition-colors"
-        title="New model"
+        title="New model: create a blank model in a new tab."
       >
         <Plus size={14} />
       </button>

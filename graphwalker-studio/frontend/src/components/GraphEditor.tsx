@@ -223,6 +223,8 @@ export default function GraphEditor({ model, modelIndex }: Props) {
     if (!containerRef.current) return;
     if (cyRef.current) cyRef.current.destroy();
     const container = containerRef.current;
+    const canvasHelp = 'Graph editor. Click a vertex or edge to select it; drag vertices to move them; use the mouse wheel to zoom. Hold V and click empty space to add a vertex. Hold E and drag from one vertex to another to add an edge. Right-click an element or empty space for more actions. Press Delete to remove the selection; press Escape to clear it.';
+    container.title = canvasHelp;
     const elements = modelToElements(model);
     const hasPositions = model.vertices.some(
       (v) => v.properties && (v.properties.x !== 0 || v.properties.y !== 0),
@@ -256,6 +258,22 @@ export default function GraphEditor({ model, modelIndex }: Props) {
 
     cy.on('tap', 'node, edge', (e) => {
       selectElement(e.target.id());
+    });
+
+    cy.on('mouseover', 'node, edge', (e) => {
+      const element = e.target;
+      const label = String(element.data('label') || element.id());
+      if (element.isNode()) {
+        container.title = `Vertex: ${label}. Click to select, drag to move, or right-click to set as start, toggle a breakpoint, or delete. Hold E and drag from this vertex to another to create an edge.`;
+      } else {
+        const source = String(element.source().data('label') || element.source().id());
+        const target = String(element.target().data('label') || element.target().id());
+        container.title = `Edge: ${label}, from ${source} to ${target}. Click to select or right-click to set as start or delete.`;
+      }
+    });
+
+    cy.on('mouseout', 'node, edge', () => {
+      container.title = canvasHelp;
     });
 
     cy.on('mousedown', 'node', (e) => {
@@ -298,17 +316,37 @@ export default function GraphEditor({ model, modelIndex }: Props) {
     cy.on('cxttap', 'node', (e) => {
       const nodeId = e.target.id();
       showContextMenu(cy, e.originalEvent as MouseEvent, themeColors, [
-        { label: 'Set as start', action: () => setStartElement(modelIndex, nodeId) },
-        { label: 'Toggle breakpoint', action: () => toggleBreakpoint(model.id, nodeId) },
-        { label: 'Delete', action: () => deleteElement(modelIndex, nodeId) },
+        {
+          label: 'Set as start',
+          description: 'Use this vertex as the starting point for new walks.',
+          action: () => setStartElement(modelIndex, nodeId),
+        },
+        {
+          label: 'Toggle breakpoint',
+          description: 'Pause a walk when it reaches this vertex.',
+          action: () => toggleBreakpoint(model.id, nodeId),
+        },
+        {
+          label: 'Delete',
+          description: 'Remove this vertex and its connected edges from the model.',
+          action: () => deleteElement(modelIndex, nodeId),
+        },
       ]);
     });
 
     cy.on('cxttap', 'edge', (e) => {
       const edgeId = e.target.id();
       showContextMenu(cy, e.originalEvent as MouseEvent, themeColors, [
-        { label: 'Set as start', action: () => setStartElement(modelIndex, edgeId) },
-        { label: 'Delete', action: () => deleteElement(modelIndex, edgeId) },
+        {
+          label: 'Set as start',
+          description: 'Use this edge as the starting point for new walks.',
+          action: () => setStartElement(modelIndex, edgeId),
+        },
+        {
+          label: 'Delete',
+          description: 'Remove this edge from the model.',
+          action: () => deleteElement(modelIndex, edgeId),
+        },
       ]);
     });
 
@@ -316,16 +354,29 @@ export default function GraphEditor({ model, modelIndex }: Props) {
       if (e.target !== cy) return;
       const pos = e.position;
       showContextMenu(cy, e.originalEvent as MouseEvent, themeColors, [
-        { label: 'Add vertex', action: () => addVertex(modelIndex, pos.x, pos.y) },
+        {
+          label: 'Add vertex',
+          description: 'Create a vertex at this position in the graph.',
+          action: () => addVertex(modelIndex, pos.x, pos.y),
+        },
         {
           label: 'Layout: Force-directed',
+          description: 'Rearrange the graph to space connected elements using their relationships.',
           action: () =>
             cy.layout({
               name: 'cose-bilkent', animate: true, idealEdgeLength: 200,
             } as unknown as cytoscape.LayoutOptions).run(),
         },
-        { label: 'Layout: Circle', action: () => cy.layout({ name: 'circle', animate: true }).run() },
-        { label: 'Layout: Grid', action: () => cy.layout({ name: 'grid', animate: true }).run() },
+        {
+          label: 'Layout: Circle',
+          description: 'Arrange vertices around a circle.',
+          action: () => cy.layout({ name: 'circle', animate: true }).run(),
+        },
+        {
+          label: 'Layout: Grid',
+          description: 'Arrange vertices in a grid.',
+          action: () => cy.layout({ name: 'grid', animate: true }).run(),
+        },
       ]);
     });
 
@@ -529,6 +580,7 @@ export default function GraphEditor({ model, modelIndex }: Props) {
       {dataEntries.length > 0 && (
         <div
           className="absolute bottom-3 left-3 rounded-lg text-xs font-mono pointer-events-none"
+          title="Current model data values, updated as the walk executes."
           style={{
             background: `${themeColors.menuBg}cc`,
             border: `1px solid ${themeColors.menuBorder}`,
@@ -562,6 +614,7 @@ export default function GraphEditor({ model, modelIndex }: Props) {
       )}
       <div
         className="absolute bottom-3 right-3 rounded-lg text-xs font-mono pointer-events-none"
+        title="Element counts and walk progress for the selected model and all open models."
         style={{
           background: `${themeColors.menuBg}cc`,
           border: `1px solid ${themeColors.menuBorder}`,
@@ -638,6 +691,7 @@ export default function GraphEditor({ model, modelIndex }: Props) {
 
 interface MenuItem {
   label: string;
+  description: string;
   action: () => void;
 }
 
@@ -668,6 +722,8 @@ function showContextMenu(
   for (const item of items) {
     const btn = document.createElement('button');
     btn.textContent = item.label;
+    btn.title = item.description;
+    btn.setAttribute('aria-label', `${item.label}. ${item.description}`);
     btn.style.cssText = `
       display: block;
       width: 100%;
