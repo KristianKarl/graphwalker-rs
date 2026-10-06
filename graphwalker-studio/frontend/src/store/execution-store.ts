@@ -20,6 +20,7 @@ interface ExecutionState {
   recordVisit: (modelId: string, elementId: string, fulfillment: number, totalCount: number, data: string) => void;
   loadSnapshot: (elements: Array<{ modelId: string; elementId: string; visitedCount: number }>) => void;
   toggleBreakpoint: (modelId: string, elementId: string) => void;
+  toggleAllBreakpoints: (modelId: string, elementIds: string[]) => void;
   hasBreakpoint: (modelId: string, elementId: string) => boolean;
   setIssues: (issues: string[]) => void;
   setCheckIssues: (issues: string[]) => void;
@@ -84,6 +85,22 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       if (bp.has(key)) bp.delete(key);
       else bp.add(key);
       return { breakpoints: bp };
+    }),
+
+  toggleAllBreakpoints: (modelId, elementIds) =>
+    set((s) => {
+      if (elementIds.length === 0) return s;
+
+      const allEnabled = elementIds.every((elementId) =>
+        s.breakpoints.has(`${modelId},${elementId}`),
+      );
+      const breakpoints = new Set(s.breakpoints);
+      for (const elementId of elementIds) {
+        const key = `${modelId},${elementId}`;
+        if (allEnabled) breakpoints.delete(key);
+        else breakpoints.add(key);
+      }
+      return { breakpoints };
     }),
 
   hasBreakpoint: (modelId, elementId) => get().breakpoints.has(`${modelId},${elementId}`),

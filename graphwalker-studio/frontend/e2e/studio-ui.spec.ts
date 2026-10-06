@@ -90,6 +90,36 @@ const SECOND_POINTS: [Point, Point, Point] = [
   { x: 310, y: 430 },
 ];
 
+test('graph context menu toggles breakpoints for every element', async ({ page }) => {
+  const server = await startStudio();
+
+  try {
+    await page.goto(server.baseUrl);
+    await expect(page.getByText('Connected', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'New model' }).first().click();
+    const graph = page.getByRole('application').first();
+    await addCycle(page, graph, FIRST_POINTS);
+
+    const bounds = await graph.boundingBox();
+    if (!bounds) throw new Error('Graph editor has no visible bounds');
+    const openCanvasMenu = () => page.mouse.click(
+      bounds.x + bounds.width - 20,
+      bounds.y + bounds.height - 20,
+      { button: 'right' },
+    );
+
+    await openCanvasMenu();
+    await page.getByRole('button', { name: /Set breakpoints on all elements/ }).click();
+    await openCanvasMenu();
+    await page.getByRole('button', { name: /Clear all breakpoints/ }).click();
+    await openCanvasMenu();
+    await expect(page.getByRole('button', { name: /Set breakpoints on all elements/ }))
+      .toBeVisible();
+  } finally {
+    await stopStudio(server.child);
+  }
+});
+
 test('Studio UI supports authoring and running multiple models', async ({ page }, testInfo) => {
   const server = await startStudio();
   const run: BrowserRun = {

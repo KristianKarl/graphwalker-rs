@@ -129,6 +129,15 @@ function buildStylesheet(t: typeof themes.dark): any[] {
       style: { 'line-color': t.startBorder, 'target-arrow-color': t.startBorder, width: 3 },
     },
     {
+      selector: 'edge.breakpoint',
+      style: {
+        'line-color': t.breakpointBorder,
+        'target-arrow-color': t.breakpointBorder,
+        'line-style': 'dashed',
+        width: 3,
+      },
+    },
+    {
       selector: 'edge.visited',
       style: { 'line-color': t.visitedBorder, 'target-arrow-color': t.visitedBorder },
     },
@@ -213,6 +222,7 @@ export default function GraphEditor({ model, modelIndex }: Props) {
   const modelVisited = useExecutionStore((s) => s.visited[model.id]);
   const currentElementId = useExecutionStore((s) => s.currentElement[model.id]);
   const modelData = useExecutionStore((s) => s.modelData[model.id]);
+  const breakpoints = useExecutionStore((s) => s.breakpoints);
   const stepCount = useExecutionStore((s) => s.stepCount);
   const allVisited = useExecutionStore((s) => s.visited);
   const allModels = useModelStore((s) => s.models);
@@ -343,6 +353,11 @@ export default function GraphEditor({ model, modelIndex }: Props) {
           action: () => setStartElement(modelIndex, edgeId),
         },
         {
+          label: 'Toggle breakpoint',
+          description: 'Pause a walk when it reaches this edge.',
+          action: () => toggleBreakpoint(model.id, edgeId),
+        },
+        {
           label: 'Delete',
           description: 'Remove this edge from the model.',
           action: () => deleteElement(modelIndex, edgeId),
@@ -353,12 +368,26 @@ export default function GraphEditor({ model, modelIndex }: Props) {
     cy.on('cxttap', (e) => {
       if (e.target !== cy) return;
       const pos = e.position;
+      const currentModel = useModelStore.getState().models.find((item) => item.id === model.id);
+      const elementIds = currentModel
+        ? [...currentModel.vertices, ...currentModel.edges].map((element) => element.id)
+        : [];
+      const allBreakpointsSet = elementIds.length > 0 && elementIds.every((elementId) =>
+        useExecutionStore.getState().hasBreakpoint(model.id, elementId),
+      );
       showContextMenu(cy, e.originalEvent as MouseEvent, themeColors, [
         {
           label: 'Add vertex',
           description: 'Create a vertex at this position in the graph.',
           action: () => addVertex(modelIndex, pos.x, pos.y),
         },
+        ...(elementIds.length > 0 ? [{
+          label: allBreakpointsSet ? 'Clear all breakpoints' : 'Set breakpoints on all elements',
+          description: allBreakpointsSet
+            ? 'Remove breakpoints from every vertex and edge in this model.'
+            : 'Set a breakpoint on every vertex and edge in this model.',
+          action: () => useExecutionStore.getState().toggleAllBreakpoints(model.id, elementIds),
+        }] : []),
         {
           label: 'Layout: Force-directed',
           description: 'Rearrange the graph to space connected elements using their relationships.',
@@ -420,7 +449,7 @@ export default function GraphEditor({ model, modelIndex }: Props) {
         existing.data(el.data);
         if (el.classes !== undefined) {
           const structural = (el.classes as string).split(' ').filter(Boolean);
-          const keep = ['visited', 'current'];
+          const keep = ['visited', 'current', 'breakpoint'];
           const preserved = keep.filter((c) => existing.hasClass(c));
           existing.classes([...structural, ...preserved].join(' '));
         }
@@ -441,6 +470,18 @@ export default function GraphEditor({ model, modelIndex }: Props) {
       cy.getElementById(currentElementId).addClass('current');
     }
   }, [modelVisited, currentElementId]);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    cy.elements().removeClass('breakpoint');
+    for (const elementId of [...model.vertices, ...model.edges].map((element) => element.id)) {
+      if (breakpoints.has(`${model.id},${elementId}`)) {
+        cy.getElementById(elementId).addClass('breakpoint');
+      }
+    }
+  }, [breakpoints, model, model.id]);
 
   useEffect(() => {
     const cy = cyRef.current;
