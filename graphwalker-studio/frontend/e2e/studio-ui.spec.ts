@@ -91,6 +91,42 @@ const SECOND_POINTS: [Point, Point, Point] = [
   { x: 310, y: 430 },
 ];
 
+test('disconnected status reconnects on click and refreshes sessions', async ({ page }) => {
+  const server = await startStudio();
+  let allowConnection = false;
+  let requestedSessions = false;
+  await page.routeWebSocket(/\/\//, (socket) => {
+    if (!allowConnection) {
+      socket.close();
+      return;
+    }
+    socket.onMessage((message) => {
+      const request = parseFrame(message);
+      if (request?.command === 'listSessions') {
+        requestedSessions = true;
+        socket.send(JSON.stringify({
+          command: 'sessions',
+          success: true,
+          sessions: [{ id: 'retry-session', name: 'Retry Session' }],
+        }));
+      }
+    });
+  });
+
+  try {
+    await page.goto(server.baseUrl);
+    const connection = page.getByRole('button', { name: 'Disconnected', exact: true });
+    await expect(connection).toBeEnabled();
+    allowConnection = true;
+    await connection.click();
+    await expect(page.getByRole('button', { name: 'Connected', exact: true })).toBeDisabled();
+    await expect.poll(() => requestedSessions).toBe(true);
+    await expect(page.getByText('Sessions (1)', { exact: true })).toBeVisible();
+  } finally {
+    await stopStudio(server.child);
+  }
+});
+
 test('graph context menu toggles breakpoints for every element', async ({ page }) => {
   const server = await startStudio();
 

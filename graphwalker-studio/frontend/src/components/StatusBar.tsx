@@ -35,6 +35,24 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
   const [expanded, setExpanded] = useState(false);
   const [expandedSource, setExpandedSource] = useState<'issues' | 'check' | null>(null);
   const [showSessions, setShowSessions] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+
+  const reconnect = async () => {
+    setConnecting(true);
+    try {
+      await wsClient.connect();
+      const response = await wsClient.send({ command: 'listSessions' });
+      if (response.success) {
+        useSessionStore.getState().setSessions(
+          (response.sessions as Array<{ id: string; name: string }>) ?? [],
+        );
+      }
+    } catch (error) {
+      setIssues([error instanceof Error ? error.message : String(error)]);
+    } finally {
+      setConnecting(false);
+    }
+  };
 
   useEffect(() => {
     if (issues.length > 0) { setExpanded(true); setExpandedSource('issues'); }
@@ -135,17 +153,25 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
       )}
 
       <div className="flex items-center h-7 bg-surface border-t border-border px-3 text-xs">
-        <div className="flex items-center gap-1.5 mr-3">
+        <button
+          type="button"
+          className={`flex items-center gap-1.5 mr-3 ${!connected && !connecting ? 'cursor-pointer hover:text-text' : ''}`}
+          onClick={reconnect}
+          disabled={connected || connecting}
+          title={connected
+            ? 'Studio is connected to the GraphWalker execution service.'
+            : connecting
+              ? 'Connecting to the GraphWalker execution service.'
+              : 'Connect to the GraphWalker execution service.'}
+          aria-busy={connecting}
+        >
           <span
             className={`w-2 h-2 rounded-full ${connected ? 'bg-success' : 'bg-danger'}`}
-            title={connected
-              ? 'Studio is connected to the GraphWalker execution service.'
-              : 'Studio is disconnected from the GraphWalker execution service. Live execution and session updates are unavailable.'}
           />
           <span className="text-text-muted">
-            {connected ? 'Connected' : 'Disconnected'}
+            {connected ? 'Connected' : connecting ? 'Connecting...' : 'Disconnected'}
           </span>
-        </div>
+        </button>
 
         {hasModels && (
           <button
