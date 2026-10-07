@@ -151,6 +151,52 @@ test('graph context menu toggles breakpoints for every element', async ({ page }
   }
 });
 
+test('Stop resets a fully executed session', async ({ page }) => {
+  const server = await startStudio();
+  let exhausted = false;
+  page.on('websocket', (socket) => {
+    socket.on('framereceived', ({ payload }) => {
+      const message = parseFrame(payload);
+      if (message?.command === 'hasNext' && message.hasNext === false) exhausted = true;
+    });
+  });
+
+  try {
+    await page.goto(server.baseUrl);
+    await expect(page.getByText('Connected', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'New model' }).first().click();
+    const graph = page.getByRole('application').first();
+    await addCycle(page, graph, FIRST_POINTS);
+    await selectPoint(graph, FIRST_POINTS[0]);
+    await page.getByRole('region', { name: 'Element' }).getByRole('button', {
+      name: 'Set as start',
+    }).click();
+    await page.getByRole('region', { name: 'Execution' }).getByLabel('Generator')
+      .fill('random(length(3))');
+
+    const stop = page.getByRole('button', {
+      name: 'Stop the current walk or leave the observed session and clear its progress.',
+    });
+    const readProgress = () => graph.evaluate((container) => {
+      const canvas = container.firstElementChild as HTMLElement & { _cyreg: { cy: Core } };
+      return canvas._cyreg.cy.$('.visited, .current').length;
+    });
+    await expect(stop).toBeDisabled();
+    await page.getByRole('button', {
+      name: 'Start or resume walking the model using its selected generator.',
+    }).click();
+    await expect.poll(() => exhausted).toBe(true);
+    await expect(page.getByText('Ready', { exact: true })).toBeVisible();
+    await expect.poll(readProgress).toBeGreaterThan(0);
+    await expect(stop).toBeEnabled();
+    await stop.click();
+    await expect.poll(readProgress).toBe(0);
+    await expect(stop).toBeDisabled();
+  } finally {
+    await stopStudio(server.child);
+  }
+});
+
 test('theme switches preserve visited graph colors', async ({ page }) => {
   const server = await startStudio();
 

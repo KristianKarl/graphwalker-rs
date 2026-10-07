@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useEditorStore } from '@/store/editor-store';
 import { useModelStore } from '@/store/model-store';
+import { useExecutionStore } from '@/store/execution-store';
 
 interface Props {
   onNewModel: () => void;
@@ -60,6 +61,7 @@ function IconButton({
 
 export default function Sidebar(props: Props) {
   const { showProperties, toggleProperties, theme, setTheme } = useEditorStore();
+  const hasProgress = useExecutionStore((s) => s.stepCount > 0);
   const canUndo = useModelStore((s) => s._past.length > 0);
   const canRedo = useModelStore((s) => s._future.length > 0);
   const undo = useModelStore((s) => s.undo);
@@ -94,7 +96,7 @@ export default function Sidebar(props: Props) {
           icon={Square}
           title="Stop the current walk or leave the observed session and clear its progress."
           onClick={props.onStop}
-          disabled={!props.running && !props.paused}
+          disabled={!props.running && !props.paused && !props.observing && !hasProgress}
         />
       </div>
 
