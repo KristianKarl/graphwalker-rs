@@ -11,14 +11,14 @@ cytoscape.use(coseBilkent);
 const themes = {
   dark: {
     bg: '#0a0a0f',
-    nodeBg: '#2a2a4a',
+    nodeBg: '#3a3a5a',
     nodeText: '#e4e4ef',
     nodeBorder: '#4a4a6a',
     edgeLine: '#7a7a9a',
     edgeText: '#a0a0b8',
     selectedBorder: '#6366f1',
-    selectedNodeBg: '#1e1e3a',
-    visitedNodeBg: '#1a3a2a',
+    selectedNodeBg: '#30304c',
+    visitedNodeBg: '#2a503a',
     visitedBorder: '#22c55e',
     startBorder: '#22c55e',
     breakpointBorder: '#ef4444',
@@ -516,7 +516,7 @@ export default function GraphEditor({ model, modelIndex }: Props) {
         cy.getElementById(elementId).addClass('breakpoint');
       }
     }
-  }, [breakpoints, model, model.id]);
+  }, [breakpoints, model, model.id, initCy]);
 
   useEffect(() => {
     const cy = cyRef.current;

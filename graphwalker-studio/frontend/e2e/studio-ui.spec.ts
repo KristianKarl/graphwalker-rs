@@ -111,8 +111,38 @@ test('graph context menu toggles breakpoints for every element', async ({ page }
 
     await openCanvasMenu();
     await page.getByRole('button', { name: /Set breakpoints on all elements/ }).click();
+    await graph.click({ position: { x: 600, y: 500 } });
+
+    const readBreakpointStyles = () => graph.evaluate((container) => {
+      const canvas = container.firstElementChild as HTMLElement & { _cyreg: { cy: Core } };
+      const cy = canvas._cyreg.cy;
+      return {
+        nodes: cy.nodes('.breakpoint').map((node) => ({
+          color: node.style('border-color'),
+          outline: node.style('border-style'),
+        })),
+        edges: cy.edges('.breakpoint').map((edge) => ({
+          color: edge.style('line-color'),
+          arrow: edge.style('target-arrow-color'),
+          outline: edge.style('line-style'),
+        })),
+      };
+    });
+    const expectedStyles = {
+      nodes: Array.from({ length: 3 }, () => ({ color: 'rgb(239,68,68)', outline: 'dashed' })),
+      edges: Array.from({ length: 3 }, () => ({
+        color: 'rgb(239,68,68)', arrow: 'rgb(239,68,68)', outline: 'dashed',
+      })),
+    };
+    await expect.poll(readBreakpointStyles).toEqual(expectedStyles);
+    await page.getByRole('button', { name: 'Switch to the light color theme.' }).click();
+    await expect.poll(readBreakpointStyles).toEqual(expectedStyles);
+    await page.getByRole('button', { name: 'Switch to the dark color theme.' }).click();
+    await expect.poll(readBreakpointStyles).toEqual(expectedStyles);
+
     await openCanvasMenu();
     await page.getByRole('button', { name: /Clear all breakpoints/ }).click();
+    await expect.poll(readBreakpointStyles).toEqual({ nodes: [], edges: [] });
     await openCanvasMenu();
     await expect(page.getByRole('button', { name: /Set breakpoints on all elements/ }))
       .toBeVisible();
@@ -152,7 +182,7 @@ test('theme switches preserve visited graph colors', async ({ page }) => {
     await step.click();
     await expect.poll(async () => (await readVisitedStyles()).edges.length).toBe(1);
     const before = await readVisitedStyles();
-    expect(before.nodes).toEqual(['rgb(26,58,42)']);
+    expect(before.nodes).toEqual(['rgb(42,80,58)']);
     expect(before.edges).toEqual(['rgb(34,197,94)']);
     expect(before.current).toHaveLength(1);
 
