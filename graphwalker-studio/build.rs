@@ -12,6 +12,8 @@ fn git_output(args: &[&str]) -> Option<String> {
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=static");
+
     for path in ["HEAD", "packed-refs"] {
         if let Some(path) = git_output(&["rev-parse", "--git-path", path]) {
             println!("cargo:rerun-if-changed={path}");

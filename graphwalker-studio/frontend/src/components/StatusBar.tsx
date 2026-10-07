@@ -35,6 +35,24 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
   const [expanded, setExpanded] = useState(false);
   const [expandedSource, setExpandedSource] = useState<'issues' | 'check' | null>(null);
   const [showSessions, setShowSessions] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+
+  const reconnect = async () => {
+    setConnecting(true);
+    try {
+      await wsClient.connect();
+      const response = await wsClient.send({ command: 'listSessions' });
+      if (response.success) {
+        useSessionStore.getState().setSessions(
+          (response.sessions as Array<{ id: string; name: string }>) ?? [],
+        );
+      }
+    } catch (error) {
+      setIssues([error instanceof Error ? error.message : String(error)]);
+    } finally {
+      setConnecting(false);
+    }
+  };
 
   useEffect(() => {
     if (issues.length > 0) { setExpanded(true); setExpandedSource('issues'); }
@@ -73,7 +91,7 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
             <button
               onClick={dismissVisible}
               className="text-text-muted hover:text-text p-0.5 rounded transition-colors"
-              title="Dismiss"
+              title="Dismiss this execution or model-check message list."
             >
               <X size={12} />
             </button>
@@ -99,7 +117,7 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
             <button
               onClick={() => setShowSessions(false)}
               className="text-text-muted hover:text-text p-0.5 rounded transition-colors"
-              title="Close"
+              title="Close the active-session list."
             >
               <X size={12} />
             </button>
@@ -110,6 +128,9 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
               return (
                 <li
                   key={s.id}
+                  title={active
+                    ? `Stop observing ${s.name} and return to the local editor.`
+                    : `Subscribe to ${s.name} to watch its live model execution.`}
                   onClick={() => {
                     if (active) { onUnsubscribeSession(); }
                     else { onSubscribeSession(s.id); }
@@ -132,15 +153,25 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
       )}
 
       <div className="flex items-center h-7 bg-surface border-t border-border px-3 text-xs">
-        <div className="flex items-center gap-1.5 mr-3">
+        <button
+          type="button"
+          className={`flex items-center gap-1.5 mr-3 ${!connected && !connecting ? 'cursor-pointer hover:text-text' : ''}`}
+          onClick={reconnect}
+          disabled={connected || connecting}
+          title={connected
+            ? 'Studio is connected to the GraphWalker execution service.'
+            : connecting
+              ? 'Connecting to the GraphWalker execution service.'
+              : 'Connect to the GraphWalker execution service.'}
+          aria-busy={connecting}
+        >
           <span
             className={`w-2 h-2 rounded-full ${connected ? 'bg-success' : 'bg-danger'}`}
-            title={connected ? 'Connected' : 'Disconnected'}
           />
           <span className="text-text-muted">
-            {connected ? 'Connected' : 'Disconnected'}
+            {connected ? 'Connected' : connecting ? 'Connecting...' : 'Disconnected'}
           </span>
-        </div>
+        </button>
 
         {hasModels && (
           <button
@@ -151,7 +182,9 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
               setExpanded(show);
               setExpandedSource(show ? 'check' : null);
             }}
-            title={checkOk ? 'Model OK' : `${checkIssues.length} model issue${checkIssues.length > 1 ? 's' : ''}`}
+            title={checkOk
+              ? 'The current models passed validation. Click to review model-check results when issues are present.'
+              : `${checkIssues.length} model issue${checkIssues.length > 1 ? 's' : ''}. Click to view validation details.`}
           >
             <span
               className={`w-2 h-2 rounded-full ${checkOk ? 'bg-success' : 'bg-danger'}`}
@@ -166,7 +199,9 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
           <button
             className="flex items-center gap-1.5 mr-3"
             onClick={() => setShowSessions(!showSessions)}
-            title={`${sessions.length} active session${sessions.length > 1 ? 's' : ''}`}
+            title={observing
+              ? `Currently watching ${sessions.find((s) => s.id === subscribedSessionId)?.name ?? 'a session'}. Click to choose another active session.`
+              : `${sessions.length} active session${sessions.length > 1 ? 's' : ''} available. Click to view and observe one.`}
           >
             <Radio size={12} className={observing ? 'text-primary' : 'text-text-muted'} />
             <span className={observing ? 'text-primary' : 'text-text-muted'}>
@@ -179,7 +214,10 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
 
         {(running || paused) && (
           <div className="flex items-center gap-2 flex-1">
-            <div className="w-48 h-1.5 bg-surface-alt rounded-full overflow-hidden">
+            <div
+              className="w-48 h-1.5 bg-surface-alt rounded-full overflow-hidden"
+              title={`Walk progress: ${(pct * 100).toFixed(0)}% of the configured stop condition.`}
+            >
               <div
                 className={`h-full rounded-full transition-all duration-300 ${
                   hasIssues ? 'bg-danger' : 'bg-success'
@@ -200,6 +238,7 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
               setExpandedSource(show ? 'issues' : null);
             }}
             className="text-danger ml-auto flex items-center gap-1.5 hover:text-danger/80 transition-colors"
+            title="View execution errors reported during the current walk."
           >
             <AlertTriangle size={12} />
             {issues.length} issue{issues.length > 1 ? 's' : ''}

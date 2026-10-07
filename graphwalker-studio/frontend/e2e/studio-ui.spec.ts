@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test';
+import type { Core } from 'cytoscape';
 
 const E2E_DIR = dirname(fileURLToPath(import.meta.url));
 const FRONTEND_DIR = resolve(E2E_DIR, '..');
@@ -89,6 +90,195 @@ const SECOND_POINTS: [Point, Point, Point] = [
   { x: 460, y: 180 },
   { x: 310, y: 430 },
 ];
+
+test('disconnected status reconnects on click and refreshes sessions', async ({ page }) => {
+  const server = await startStudio();
+  let allowConnection = false;
+  let requestedSessions = false;
+  await page.routeWebSocket(/\/\//, (socket) => {
+    if (!allowConnection) {
+      socket.close();
+      return;
+    }
+    socket.onMessage((message) => {
+      const request = parseFrame(message);
+      if (request?.command === 'listSessions') {
+        requestedSessions = true;
+        socket.send(JSON.stringify({
+          command: 'sessions',
+          success: true,
+          sessions: [{ id: 'retry-session', name: 'Retry Session' }],
+        }));
+      }
+    });
+  });
+
+  try {
+    await page.goto(server.baseUrl);
+    const connection = page.getByRole('button', { name: 'Disconnected', exact: true });
+    await expect(connection).toBeEnabled();
+    allowConnection = true;
+    await connection.click();
+    await expect(page.getByRole('button', { name: 'Connected', exact: true })).toBeDisabled();
+    await expect.poll(() => requestedSessions).toBe(true);
+    await expect(page.getByText('Sessions (1)', { exact: true })).toBeVisible();
+  } finally {
+    await stopStudio(server.child);
+  }
+});
+
+test('graph context menu toggles breakpoints for every element', async ({ page }) => {
+  const server = await startStudio();
+
+  try {
+    await page.goto(server.baseUrl);
+    await expect(page.getByText('Connected', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'New model' }).first().click();
+    const graph = page.getByRole('application').first();
+    await addCycle(page, graph, FIRST_POINTS);
+
+    const bounds = await graph.boundingBox();
+    if (!bounds) throw new Error('Graph editor has no visible bounds');
+    const openCanvasMenu = () => page.mouse.click(
+      bounds.x + bounds.width - 20,
+      bounds.y + bounds.height - 20,
+      { button: 'right' },
+    );
+
+    await openCanvasMenu();
+    await page.getByRole('button', { name: /Set breakpoints on all elements/ }).click();
+    await graph.click({ position: { x: 600, y: 500 } });
+
+    const readBreakpointStyles = () => graph.evaluate((container) => {
+      const canvas = container.firstElementChild as HTMLElement & { _cyreg: { cy: Core } };
+      const cy = canvas._cyreg.cy;
+      return {
+        nodes: cy.nodes('.breakpoint').map((node) => ({
+          color: node.style('border-color'),
+          outline: node.style('border-style'),
+        })),
+        edges: cy.edges('.breakpoint').map((edge) => ({
+          color: edge.style('line-color'),
+          arrow: edge.style('target-arrow-color'),
+          outline: edge.style('line-style'),
+        })),
+      };
+    });
+    const expectedStyles = {
+      nodes: Array.from({ length: 3 }, () => ({ color: 'rgb(239,68,68)', outline: 'dashed' })),
+      edges: Array.from({ length: 3 }, () => ({
+        color: 'rgb(239,68,68)', arrow: 'rgb(239,68,68)', outline: 'dashed',
+      })),
+    };
+    await expect.poll(readBreakpointStyles).toEqual(expectedStyles);
+    await page.getByRole('button', { name: 'Switch to the light color theme.' }).click();
+    await expect.poll(readBreakpointStyles).toEqual(expectedStyles);
+    await page.getByRole('button', { name: 'Switch to the dark color theme.' }).click();
+    await expect.poll(readBreakpointStyles).toEqual(expectedStyles);
+
+    await openCanvasMenu();
+    await page.getByRole('button', { name: /Clear all breakpoints/ }).click();
+    await expect.poll(readBreakpointStyles).toEqual({ nodes: [], edges: [] });
+    await openCanvasMenu();
+    await expect(page.getByRole('button', { name: /Set breakpoints on all elements/ }))
+      .toBeVisible();
+  } finally {
+    await stopStudio(server.child);
+  }
+});
+
+test('Stop resets a fully executed session', async ({ page }) => {
+  const server = await startStudio();
+  let exhausted = false;
+  page.on('websocket', (socket) => {
+    socket.on('framereceived', ({ payload }) => {
+      const message = parseFrame(payload);
+      if (message?.command === 'hasNext' && message.hasNext === false) exhausted = true;
+    });
+  });
+
+  try {
+    await page.goto(server.baseUrl);
+    await expect(page.getByText('Connected', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'New model' }).first().click();
+    const graph = page.getByRole('application').first();
+    await addCycle(page, graph, FIRST_POINTS);
+    await selectPoint(graph, FIRST_POINTS[0]);
+    await page.getByRole('region', { name: 'Element' }).getByRole('button', {
+      name: 'Set as start',
+    }).click();
+    await page.getByRole('region', { name: 'Execution' }).getByLabel('Generator')
+      .fill('random(length(3))');
+
+    const stop = page.getByRole('button', {
+      name: 'Stop the current walk or leave the observed session and clear its progress.',
+    });
+    const readProgress = () => graph.evaluate((container) => {
+      const canvas = container.firstElementChild as HTMLElement & { _cyreg: { cy: Core } };
+      return canvas._cyreg.cy.$('.visited, .current').length;
+    });
+    await expect(stop).toBeDisabled();
+    await page.getByRole('button', {
+      name: 'Start or resume walking the model using its selected generator.',
+    }).click();
+    await expect.poll(() => exhausted).toBe(true);
+    await expect(page.getByText('Ready', { exact: true })).toBeVisible();
+    await expect.poll(readProgress).toBeGreaterThan(0);
+    await expect(stop).toBeEnabled();
+    await stop.click();
+    await expect.poll(readProgress).toBe(0);
+    await expect(stop).toBeDisabled();
+  } finally {
+    await stopStudio(server.child);
+  }
+});
+
+test('theme switches preserve visited graph colors', async ({ page }) => {
+  const server = await startStudio();
+
+  try {
+    await page.goto(server.baseUrl);
+    await expect(page.getByText('Connected', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'New model' }).first().click();
+    const graph = page.getByRole('application').first();
+    await addCycle(page, graph, FIRST_POINTS);
+    await selectPoint(graph, FIRST_POINTS[0]);
+    await page.getByRole('region', { name: 'Element' }).getByRole('button', {
+      name: 'Set as start',
+    }).click();
+    await graph.click({ position: { x: 600, y: 500 } });
+
+    const readVisitedStyles = () => graph.evaluate((container) => {
+      const canvas = container.firstElementChild as HTMLElement & { _cyreg: { cy: Core } };
+      const cy = canvas._cyreg.cy;
+      return {
+        nodes: cy.nodes('.visited').map((node) => node.style('background-color')),
+        edges: cy.edges('.visited').map((edge) => edge.style('line-color')),
+        current: cy.$('.current').map((element) => element.id()),
+      };
+    });
+
+    const step = page.getByRole('button', { name: 'Step' });
+    await step.click();
+    await expect.poll(async () => (await readVisitedStyles()).nodes.length).toBe(1);
+    await step.click();
+    await expect.poll(async () => (await readVisitedStyles()).edges.length).toBe(1);
+    const before = await readVisitedStyles();
+    expect(before.nodes).toEqual(['rgb(42,80,58)']);
+    expect(before.edges).toEqual(['rgb(34,197,94)']);
+    expect(before.current).toHaveLength(1);
+
+    await page.getByRole('button', { name: 'Switch to the light color theme.' }).click();
+    await expect.poll(readVisitedStyles).toEqual({
+      ...before,
+      nodes: ['rgb(212,237,218)'],
+    });
+    await page.getByRole('button', { name: 'Switch to the dark color theme.' }).click();
+    await expect.poll(readVisitedStyles).toEqual(before);
+  } finally {
+    await stopStudio(server.child);
+  }
+});
 
 test('Studio UI supports authoring and running multiple models', async ({ page }, testInfo) => {
   const server = await startStudio();

@@ -19,12 +19,14 @@ function Field({
   label,
   value,
   onChange,
+  help,
   disabled,
   multiline,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  help: string;
   disabled?: boolean;
   multiline?: boolean;
 }) {
@@ -45,6 +47,7 @@ function Field({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
+          title={help}
           rows={3}
         />
       ) : (
@@ -54,6 +57,7 @@ function Field({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
+          title={help}
         />
       )}
     </div>
@@ -101,6 +105,7 @@ export default function PropertiesPanel() {
                 type="checkbox"
                 checked={autoSeed}
                 onChange={(e) => setAutoSeed(e.target.checked)}
+                title="Generate a seed automatically for each new walk. Turn this off to enter a repeatable seed."
                 className="accent-primary"
               />
               Auto
@@ -118,6 +123,7 @@ export default function PropertiesPanel() {
             value={seed}
             onChange={(e) => setSeed(e.target.value)}
             disabled={autoSeed}
+            title="Seed used by the generator to make a walk repeatable. Use the same seed and model to reproduce a run."
             placeholder={autoSeed ? '' : 'Enter a seed number'}
           />
           {!autoSeed && !seed.trim() && (
@@ -128,6 +134,7 @@ export default function PropertiesPanel() {
           label="Global data"
           value={globalData}
           onChange={setGlobalData}
+          help="Initial global data supplied to the model when a walk starts."
           multiline
         />
       </Section>
@@ -137,6 +144,7 @@ export default function PropertiesPanel() {
           label="Generator"
           value={model.generator}
           onChange={(v) => updateModel(selectedModelIndex, { generator: v })}
+          help="Choose the path generator and its stop condition, which determine how the model is traversed."
         />
         <div>
           <label htmlFor="studio-step-delay" className="block text-xs text-text-muted mb-1">
@@ -151,6 +159,7 @@ export default function PropertiesPanel() {
             aria-label="Step delay"
             value={delay}
             onChange={(e) => setDelay(Number(e.target.value))}
+            title="Wait this many milliseconds between walk steps. Set to zero to run without a delay."
             className="w-full accent-primary"
           />
         </div>
@@ -161,6 +170,7 @@ export default function PropertiesPanel() {
           label="Name"
           value={model.name}
           onChange={(v) => updateModel(selectedModelIndex, { name: v })}
+          help="Display name for this model and its editor tab."
         />
         <Field
           label="Actions"
@@ -169,6 +179,7 @@ export default function PropertiesPanel() {
             const actions = v.split('\n').map((s) => s.trim()).filter(Boolean);
             updateModel(selectedModelIndex, { actions });
           }}
+          help="Actions associated with this model. Enter one action per line."
           multiline
         />
       </Section>
@@ -181,6 +192,7 @@ export default function PropertiesPanel() {
             if (vertex) updateVertex(selectedModelIndex, vertex.id, { name: v });
             if (edge) updateEdge(selectedModelIndex, edge.id, { name: v });
           }}
+          help="Label shown for the selected vertex or edge in the graph."
           disabled={noSelection}
         />
         {(vertex || noSelection) && (
@@ -190,6 +202,7 @@ export default function PropertiesPanel() {
             onChange={(v) => {
               if (vertex) updateVertex(selectedModelIndex, vertex.id, { sharedState: v || undefined });
             }}
+            help="Shared-state identifier for this vertex. Vertices in different models with the same identifier can share execution state."
             disabled={noSelection}
           />
         )}
@@ -201,6 +214,7 @@ export default function PropertiesPanel() {
               onChange={(v) => {
                 if (edge) updateEdge(selectedModelIndex, edge.id, { guard: v || undefined });
               }}
+              help="Condition that must be true for this edge to be eligible during a walk."
               disabled={noSelection}
             />
             <Field
@@ -209,6 +223,7 @@ export default function PropertiesPanel() {
               onChange={(v) => {
                 if (edge) updateEdge(selectedModelIndex, edge.id, { weight: v ? Number(v) : undefined });
               }}
+              help="Relative probability weight used by generators that choose between eligible edges."
               disabled={noSelection}
             />
           </>
@@ -226,6 +241,7 @@ export default function PropertiesPanel() {
             else if (edge) updateEdge(selectedModelIndex, edge.id, { actions });
             else updateModel(selectedModelIndex, { actions });
           }}
+          help="Actions executed for this model, vertex, or edge. Enter one action per line."
           multiline
         />
         <Field
@@ -236,6 +252,7 @@ export default function PropertiesPanel() {
             if (vertex) updateVertex(selectedModelIndex, vertex.id, { requirements: reqs });
             if (edge) updateEdge(selectedModelIndex, edge.id, { requirements: reqs });
           }}
+          help="Requirements covered by this vertex or edge. Enter one requirement per line."
           disabled={noSelection}
           multiline
         />
@@ -243,7 +260,11 @@ export default function PropertiesPanel() {
           <div className="flex items-center gap-2">
             <label className="text-xs text-text-muted">Start element</label>
             <button
+              type="button"
               onClick={() => setStartElement(selectedModelIndex, (vertex?.id ?? edge?.id)!)}
+              title={model.startElementId === (vertex?.id ?? edge?.id)
+                ? 'This is the element where a new walk starts.'
+                : 'Make this vertex or edge the starting point for new walks.'}
               className={`
                 px-2 py-0.5 text-xs rounded-md border transition-colors
                 ${model.startElementId === (vertex?.id ?? edge?.id)

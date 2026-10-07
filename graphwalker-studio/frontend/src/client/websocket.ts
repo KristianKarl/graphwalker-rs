@@ -43,6 +43,7 @@ export class WebSocketClient {
     if (!this.pendingCommand) return false;
     if (response.command === 'issues') return true;
     if (this.pendingCommand === 'getNext' && response.command === 'visitedElement') return true;
+    if (this.pendingCommand === 'listSessions' && response.command === 'sessions') return true;
     if (this.pendingCommand === 'subscribeSession' && response.command === 'subscribeSession')
       return true;
     if (this.pendingCommand !== 'getNext' && this.pendingCommand === response.command) return true;

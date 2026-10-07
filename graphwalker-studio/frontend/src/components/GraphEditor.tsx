@@ -11,18 +11,15 @@ cytoscape.use(coseBilkent);
 const themes = {
   dark: {
     bg: '#0a0a0f',
-    nodeBg: '#2a2a4a',
+    nodeBg: '#3a3a5a',
     nodeText: '#e4e4ef',
     nodeBorder: '#4a4a6a',
     edgeLine: '#7a7a9a',
     edgeText: '#a0a0b8',
     selectedBorder: '#6366f1',
-    selectedNodeBg: '#1e1e3a',
-    visitedNodeBg: '#1a3a2a',
+    selectedNodeBg: '#30304c',
+    visitedNodeBg: '#2a503a',
     visitedBorder: '#22c55e',
-    currentNodeBg: '#22c55e',
-    currentNodeText: '#0a0a0f',
-    currentBorder: '#4ade80',
     startBorder: '#22c55e',
     breakpointBorder: '#ef4444',
     sharedBorder: '#f59e0b',
@@ -42,9 +39,6 @@ const themes = {
     selectedNodeBg: '#e8e8f8',
     visitedNodeBg: '#d4edda',
     visitedBorder: '#22c55e',
-    currentNodeBg: '#22c55e',
-    currentNodeText: '#ffffff',
-    currentBorder: '#16a34a',
     startBorder: '#22c55e',
     breakpointBorder: '#ef4444',
     sharedBorder: '#f59e0b',
@@ -89,14 +83,6 @@ function buildStylesheet(t: typeof themes.dark): any[] {
       style: { 'background-color': t.visitedNodeBg, 'border-color': t.visitedBorder },
     },
     {
-      selector: 'node.current',
-      style: {
-        'background-color': t.currentNodeBg,
-        'border-color': t.currentBorder,
-        'border-width': 3,
-      },
-    },
-    {
       selector: 'node.breakpoint',
       style: { 'border-color': t.breakpointBorder, 'border-width': 3, 'border-style': 'dashed' },
     },
@@ -107,6 +93,17 @@ function buildStylesheet(t: typeof themes.dark): any[] {
     {
       selector: 'node:selected',
       style: { 'border-color': t.selectedBorder, 'border-width': 3, 'background-color': t.selectedNodeBg },
+    },
+    {
+      selector: 'node.current',
+      style: {
+        'background-color': t.visitedNodeBg,
+        'border-color': t.visitedBorder,
+        'border-width': 4,
+        'overlay-color': t.visitedBorder,
+        'overlay-opacity': 0,
+        'overlay-padding': 3,
+      },
     },
     {
       selector: 'edge',
@@ -129,16 +126,32 @@ function buildStylesheet(t: typeof themes.dark): any[] {
       style: { 'line-color': t.startBorder, 'target-arrow-color': t.startBorder, width: 3 },
     },
     {
+      selector: 'edge.breakpoint',
+      style: {
+        'line-color': t.breakpointBorder,
+        'target-arrow-color': t.breakpointBorder,
+        'line-style': 'dashed',
+        width: 3,
+      },
+    },
+    {
       selector: 'edge.visited',
       style: { 'line-color': t.visitedBorder, 'target-arrow-color': t.visitedBorder },
     },
     {
-      selector: 'edge.current',
-      style: { 'line-color': t.currentBorder, 'target-arrow-color': t.currentBorder, width: 3 },
-    },
-    {
       selector: 'edge:selected',
       style: { 'line-color': t.selectedBorder, 'target-arrow-color': t.selectedBorder, width: 3 },
+    },
+    {
+      selector: 'edge.current',
+      style: {
+        'line-color': t.visitedBorder,
+        'target-arrow-color': t.visitedBorder,
+        width: 4,
+        'overlay-color': t.visitedBorder,
+        'overlay-opacity': 0,
+        'overlay-padding': 3,
+      },
     },
     {
       selector: ':loop',
@@ -213,6 +226,8 @@ export default function GraphEditor({ model, modelIndex }: Props) {
   const modelVisited = useExecutionStore((s) => s.visited[model.id]);
   const currentElementId = useExecutionStore((s) => s.currentElement[model.id]);
   const modelData = useExecutionStore((s) => s.modelData[model.id]);
+  const breakpoints = useExecutionStore((s) => s.breakpoints);
+  const paused = useExecutionStore((s) => s.paused);
   const stepCount = useExecutionStore((s) => s.stepCount);
   const allVisited = useExecutionStore((s) => s.visited);
   const allModels = useModelStore((s) => s.models);
@@ -223,6 +238,8 @@ export default function GraphEditor({ model, modelIndex }: Props) {
     if (!containerRef.current) return;
     if (cyRef.current) cyRef.current.destroy();
     const container = containerRef.current;
+    const canvasHelp = 'Graph editor. Click a vertex or edge to select it; drag vertices to move them; use the mouse wheel to zoom. Hold V and click empty space to add a vertex. Hold E and drag from one vertex to another to add an edge. Right-click an element or empty space for more actions. Press Delete to remove the selection; press Escape to clear it.';
+    container.title = canvasHelp;
     const elements = modelToElements(model);
     const hasPositions = model.vertices.some(
       (v) => v.properties && (v.properties.x !== 0 || v.properties.y !== 0),
@@ -256,6 +273,22 @@ export default function GraphEditor({ model, modelIndex }: Props) {
 
     cy.on('tap', 'node, edge', (e) => {
       selectElement(e.target.id());
+    });
+
+    cy.on('mouseover', 'node, edge', (e) => {
+      const element = e.target;
+      const label = String(element.data('label') || element.id());
+      if (element.isNode()) {
+        container.title = `Vertex: ${label}. Click to select, drag to move, or right-click to set as start, toggle a breakpoint, or delete. Hold E and drag from this vertex to another to create an edge.`;
+      } else {
+        const source = String(element.source().data('label') || element.source().id());
+        const target = String(element.target().data('label') || element.target().id());
+        container.title = `Edge: ${label}, from ${source} to ${target}. Click to select or right-click to set as start or delete.`;
+      }
+    });
+
+    cy.on('mouseout', 'node, edge', () => {
+      container.title = canvasHelp;
     });
 
     cy.on('mousedown', 'node', (e) => {
@@ -298,34 +331,86 @@ export default function GraphEditor({ model, modelIndex }: Props) {
     cy.on('cxttap', 'node', (e) => {
       const nodeId = e.target.id();
       showContextMenu(cy, e.originalEvent as MouseEvent, themeColors, [
-        { label: 'Set as start', action: () => setStartElement(modelIndex, nodeId) },
-        { label: 'Toggle breakpoint', action: () => toggleBreakpoint(model.id, nodeId) },
-        { label: 'Delete', action: () => deleteElement(modelIndex, nodeId) },
+        {
+          label: 'Set as start',
+          description: 'Use this vertex as the starting point for new walks.',
+          action: () => setStartElement(modelIndex, nodeId),
+        },
+        {
+          label: 'Toggle breakpoint',
+          description: 'Pause a walk when it reaches this vertex.',
+          action: () => toggleBreakpoint(model.id, nodeId),
+        },
+        {
+          label: 'Delete',
+          description: 'Remove this vertex and its connected edges from the model.',
+          action: () => deleteElement(modelIndex, nodeId),
+        },
       ]);
     });
 
     cy.on('cxttap', 'edge', (e) => {
       const edgeId = e.target.id();
       showContextMenu(cy, e.originalEvent as MouseEvent, themeColors, [
-        { label: 'Set as start', action: () => setStartElement(modelIndex, edgeId) },
-        { label: 'Delete', action: () => deleteElement(modelIndex, edgeId) },
+        {
+          label: 'Set as start',
+          description: 'Use this edge as the starting point for new walks.',
+          action: () => setStartElement(modelIndex, edgeId),
+        },
+        {
+          label: 'Toggle breakpoint',
+          description: 'Pause a walk when it reaches this edge.',
+          action: () => toggleBreakpoint(model.id, edgeId),
+        },
+        {
+          label: 'Delete',
+          description: 'Remove this edge from the model.',
+          action: () => deleteElement(modelIndex, edgeId),
+        },
       ]);
     });
 
     cy.on('cxttap', (e) => {
       if (e.target !== cy) return;
       const pos = e.position;
+      const currentModel = useModelStore.getState().models.find((item) => item.id === model.id);
+      const elementIds = currentModel
+        ? [...currentModel.vertices, ...currentModel.edges].map((element) => element.id)
+        : [];
+      const allBreakpointsSet = elementIds.length > 0 && elementIds.every((elementId) =>
+        useExecutionStore.getState().hasBreakpoint(model.id, elementId),
+      );
       showContextMenu(cy, e.originalEvent as MouseEvent, themeColors, [
-        { label: 'Add vertex', action: () => addVertex(modelIndex, pos.x, pos.y) },
+        {
+          label: 'Add vertex',
+          description: 'Create a vertex at this position in the graph.',
+          action: () => addVertex(modelIndex, pos.x, pos.y),
+        },
+        ...(elementIds.length > 0 ? [{
+          label: allBreakpointsSet ? 'Clear all breakpoints' : 'Set breakpoints on all elements',
+          description: allBreakpointsSet
+            ? 'Remove breakpoints from every vertex and edge in this model.'
+            : 'Set a breakpoint on every vertex and edge in this model.',
+          action: () => useExecutionStore.getState().toggleAllBreakpoints(model.id, elementIds),
+        }] : []),
         {
           label: 'Layout: Force-directed',
+          description: 'Rearrange the graph to space connected elements using their relationships.',
           action: () =>
             cy.layout({
               name: 'cose-bilkent', animate: true, idealEdgeLength: 200,
             } as unknown as cytoscape.LayoutOptions).run(),
         },
-        { label: 'Layout: Circle', action: () => cy.layout({ name: 'circle', animate: true }).run() },
-        { label: 'Layout: Grid', action: () => cy.layout({ name: 'grid', animate: true }).run() },
+        {
+          label: 'Layout: Circle',
+          description: 'Arrange vertices around a circle.',
+          action: () => cy.layout({ name: 'circle', animate: true }).run(),
+        },
+        {
+          label: 'Layout: Grid',
+          description: 'Arrange vertices in a grid.',
+          action: () => cy.layout({ name: 'grid', animate: true }).run(),
+        },
       ]);
     });
 
@@ -369,7 +454,7 @@ export default function GraphEditor({ model, modelIndex }: Props) {
         existing.data(el.data);
         if (el.classes !== undefined) {
           const structural = (el.classes as string).split(' ').filter(Boolean);
-          const keep = ['visited', 'current'];
+          const keep = ['visited', 'current', 'breakpoint'];
           const preserved = keep.filter((c) => existing.hasClass(c));
           existing.classes([...structural, ...preserved].join(' '));
         }
@@ -389,7 +474,49 @@ export default function GraphEditor({ model, modelIndex }: Props) {
     if (currentElementId) {
       cy.getElementById(currentElementId).addClass('current');
     }
-  }, [modelVisited, currentElementId]);
+  }, [modelVisited, currentElementId, initCy]);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    const current = cy?.$('.current');
+    if (!current?.length || !paused || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
+    current.style('overlay-color', themeColors.visitedBorder);
+    current.style('overlay-padding', 3);
+    current.style('overlay-opacity', 0.1);
+
+    const pulse = (glow: boolean) => {
+      current.animate({
+        style: {
+          'overlay-padding': glow ? 8 : 3,
+          'overlay-opacity': glow ? 0.4 : 0.1,
+        },
+        duration: 1400,
+        easing: 'ease-in-out-cubic',
+        complete: () => pulse(!glow),
+      });
+    };
+    pulse(true);
+
+    return () => {
+      current.stop(true, false);
+      current.removeStyle('overlay-color overlay-padding overlay-opacity');
+    };
+  }, [currentElementId, paused, themeColors.visitedBorder, initCy]);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    cy.elements().removeClass('breakpoint');
+    for (const elementId of [...model.vertices, ...model.edges].map((element) => element.id)) {
+      if (breakpoints.has(`${model.id},${elementId}`)) {
+        cy.getElementById(elementId).addClass('breakpoint');
+      }
+    }
+  }, [breakpoints, model, model.id, initCy]);
 
   useEffect(() => {
     const cy = cyRef.current;
@@ -529,6 +656,7 @@ export default function GraphEditor({ model, modelIndex }: Props) {
       {dataEntries.length > 0 && (
         <div
           className="absolute bottom-3 left-3 rounded-lg text-xs font-mono pointer-events-none"
+          title="Current model data values, updated as the walk executes."
           style={{
             background: `${themeColors.menuBg}cc`,
             border: `1px solid ${themeColors.menuBorder}`,
@@ -562,6 +690,7 @@ export default function GraphEditor({ model, modelIndex }: Props) {
       )}
       <div
         className="absolute bottom-3 right-3 rounded-lg text-xs font-mono pointer-events-none"
+        title="Element counts and walk progress for the selected model and all open models."
         style={{
           background: `${themeColors.menuBg}cc`,
           border: `1px solid ${themeColors.menuBorder}`,
@@ -638,6 +767,7 @@ export default function GraphEditor({ model, modelIndex }: Props) {
 
 interface MenuItem {
   label: string;
+  description: string;
   action: () => void;
 }
 
@@ -668,6 +798,8 @@ function showContextMenu(
   for (const item of items) {
     const btn = document.createElement('button');
     btn.textContent = item.label;
+    btn.title = item.description;
+    btn.setAttribute('aria-label', `${item.label}. ${item.description}`);
     btn.style.cssText = `
       display: block;
       width: 100%;
