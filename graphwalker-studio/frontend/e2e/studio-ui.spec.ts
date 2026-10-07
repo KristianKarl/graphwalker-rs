@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test';
+import type { Core } from 'cytoscape';
 
 const E2E_DIR = dirname(fileURLToPath(import.meta.url));
 const FRONTEND_DIR = resolve(E2E_DIR, '..');
@@ -115,6 +116,53 @@ test('graph context menu toggles breakpoints for every element', async ({ page }
     await openCanvasMenu();
     await expect(page.getByRole('button', { name: /Set breakpoints on all elements/ }))
       .toBeVisible();
+  } finally {
+    await stopStudio(server.child);
+  }
+});
+
+test('theme switches preserve visited graph colors', async ({ page }) => {
+  const server = await startStudio();
+
+  try {
+    await page.goto(server.baseUrl);
+    await expect(page.getByText('Connected', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'New model' }).first().click();
+    const graph = page.getByRole('application').first();
+    await addCycle(page, graph, FIRST_POINTS);
+    await selectPoint(graph, FIRST_POINTS[0]);
+    await page.getByRole('region', { name: 'Element' }).getByRole('button', {
+      name: 'Set as start',
+    }).click();
+    await graph.click({ position: { x: 600, y: 500 } });
+
+    const readVisitedStyles = () => graph.evaluate((container) => {
+      const canvas = container.firstElementChild as HTMLElement & { _cyreg: { cy: Core } };
+      const cy = canvas._cyreg.cy;
+      return {
+        nodes: cy.nodes('.visited').map((node) => node.style('background-color')),
+        edges: cy.edges('.visited').map((edge) => edge.style('line-color')),
+        current: cy.$('.current').map((element) => element.id()),
+      };
+    });
+
+    const step = page.getByRole('button', { name: 'Step' });
+    await step.click();
+    await expect.poll(async () => (await readVisitedStyles()).nodes.length).toBe(1);
+    await step.click();
+    await expect.poll(async () => (await readVisitedStyles()).edges.length).toBe(1);
+    const before = await readVisitedStyles();
+    expect(before.nodes).toEqual(['rgb(26,58,42)']);
+    expect(before.edges).toEqual(['rgb(34,197,94)']);
+    expect(before.current).toHaveLength(1);
+
+    await page.getByRole('button', { name: 'Switch to the light color theme.' }).click();
+    await expect.poll(readVisitedStyles).toEqual({
+      ...before,
+      nodes: ['rgb(212,237,218)'],
+    });
+    await page.getByRole('button', { name: 'Switch to the dark color theme.' }).click();
+    await expect.poll(readVisitedStyles).toEqual(before);
   } finally {
     await stopStudio(server.child);
   }

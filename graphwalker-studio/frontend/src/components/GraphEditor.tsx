@@ -474,7 +474,7 @@ export default function GraphEditor({ model, modelIndex }: Props) {
     if (currentElementId) {
       cy.getElementById(currentElementId).addClass('current');
     }
-  }, [modelVisited, currentElementId]);
+  }, [modelVisited, currentElementId, initCy]);
 
   useEffect(() => {
     const cy = cyRef.current;
@@ -504,7 +504,7 @@ export default function GraphEditor({ model, modelIndex }: Props) {
       current.stop(true, false);
       current.removeStyle('overlay-color overlay-padding overlay-opacity');
     };
-  }, [currentElementId, paused, themeColors.visitedBorder]);
+  }, [currentElementId, paused, themeColors.visitedBorder, initCy]);
 
   useEffect(() => {
     const cy = cyRef.current;
