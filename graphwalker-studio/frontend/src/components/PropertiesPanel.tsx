@@ -3,6 +3,7 @@ import { useModelStore } from '@/store/model-store';
 import { useExecutionStore } from '@/store/execution-store';
 import { useEditorStore } from '@/store/editor-store';
 import type { GWModel } from '@/store/types';
+import GeneratorEditor from './GeneratorEditor';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -140,11 +141,10 @@ export default function PropertiesPanel() {
       </Section>
 
       <Section title="Execution">
-        <Field
-          label="Generator"
-          value={model.generator}
-          onChange={(v) => updateModel(selectedModelIndex, { generator: v })}
-          help="Choose the path generator and its stop condition, which determine how the model is traversed."
+        <GeneratorEditor
+          key={model.id}
+          model={model}
+          onChange={(value) => updateModel(selectedModelIndex, { generator: value })}
         />
         <div>
           <label htmlFor="studio-step-delay" className="block text-xs text-text-muted mb-1">

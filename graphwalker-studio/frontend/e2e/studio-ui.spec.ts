@@ -91,6 +91,60 @@ const SECOND_POINTS: [Point, Point, Point] = [
   { x: 310, y: 430 },
 ];
 
+test('generator builder edits ordered stages and preserves complex text', async ({ page }, testInfo) => {
+  const server = await startStudio();
+  try {
+    await page.goto(server.baseUrl);
+    await page.getByRole('button', { name: 'New model' }).first().click();
+    await page.getByRole('region', { name: 'Model' }).getByLabel('Name').fill('Checkout Flow');
+    const execution = page.getByRole('region', { name: 'Execution' });
+    const expression = execution.getByRole('textbox', { name: 'Generator expression', exact: true });
+    const first = execution.getByRole('group', { name: 'Generator stage 1', exact: true });
+    await expect(expression).toHaveValue('random(edge_coverage(100))');
+    await first.getByLabel('Value (%)').fill('101');
+    await expect(first.getByRole('alert')).toHaveText('Enter a whole number from 0 to 100.');
+    await first.getByLabel('Value (%)').fill('80');
+    await expect(first.getByRole('alert')).toHaveCount(0);
+    await execution.getByRole('button', { name: 'Add generator', exact: true }).click();
+    const second = execution.getByRole('group', { name: 'Generator stage 2', exact: true });
+    await second.getByLabel('Generator', { exact: true }).selectOption('a_star');
+    await expect(second.getByLabel('Stop when')).toHaveValue('reached_vertex');
+    await second.getByLabel('Target name').fill('v_Checkout');
+    await expect(expression).toHaveValue('random(edge_coverage(80)) a_star(reached_vertex(v_Checkout))');
+    await execution.getByRole('button', { name: 'Move stage 2 up', exact: true }).click();
+    await expect(expression).toHaveValue('a_star(reached_vertex(v_Checkout)) random(edge_coverage(80))');
+    await execution.getByRole('button', { name: 'Move stage 1 down', exact: true }).click();
+    const exported = await saveModels(page);
+    expect(exported.models[0].generator).toBe('random(edge_coverage(80)) a_star(reached_vertex(v_Checkout))');
+    await page.screenshot({ path: testInfo.outputPath('generator-builder-desktop.png'), animations: 'disabled' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: testInfo.outputPath('generator-builder-mobile.png'), animations: 'disabled' });
+    await expect(second.getByLabel('Target name')).toBeVisible();
+    await page.setViewportSize({ width: 1440, height: 960 });
+    await execution.getByRole('button', { name: 'Remove stage 2', exact: true }).click();
+    await expect(execution.getByRole('button', { name: 'Remove stage 1', exact: true })).toBeDisabled();
+    await first.getByLabel('Generator', { exact: true }).selectOption('new_york_street_sweeper');
+    await expect(first.getByLabel('Stop when')).toHaveCount(0);
+    await expect(expression).toHaveValue('new_york_street_sweeper()');
+    await execution.getByRole('button', { name: 'Text', exact: true }).click();
+    const text = execution.getByRole('textbox', { name: 'Generator', exact: true });
+    const complex = 'random(edge_coverage(100) or time_duration(60)) a_star(reached_vertex(v_Checkout))';
+    await text.fill(complex);
+    await expect(execution.getByRole('button', { name: 'Builder', exact: true })).toBeDisabled();
+    expect((await saveModels(page)).models[0].generator).toBe(complex);
+    await text.fill('QuickRandomPath(EdgeCoverage(100)) random(length(20))');
+    await execution.getByRole('button', { name: 'Builder', exact: true }).click();
+    await expect(expression).toHaveValue('QuickRandomPath(EdgeCoverage(100)) random(length(20))');
+    await expect(first.getByLabel('Generator', { exact: true })).toHaveValue('quick_random');
+    await execution.getByRole('button', { name: 'Text', exact: true }).click();
+    await text.fill('random(unknown_condition(5))');
+    await expect(execution.getByRole('button', { name: 'Builder', exact: true })).toBeDisabled();
+    await expect(text).toHaveValue('random(unknown_condition(5))');
+  } finally {
+    await stopStudio(server.child);
+  }
+});
+
 test('disconnected status reconnects on click and refreshes sessions', async ({ page }) => {
   const server = await startStudio();
   let allowConnection = false;
@@ -207,7 +261,8 @@ test('Stop resets a fully executed session', async ({ page }) => {
     await page.getByRole('region', { name: 'Element' }).getByRole('button', {
       name: 'Set as start',
     }).click();
-    await page.getByRole('region', { name: 'Execution' }).getByLabel('Generator')
+    await page.getByRole('region', { name: 'Execution' }).getByRole('button', { name: 'Text', exact: true }).click();
+    await page.getByRole('region', { name: 'Execution' }).getByLabel('Generator', { exact: true })
       .fill('random(length(3))');
 
     const stop = page.getByRole('button', {
@@ -414,8 +469,9 @@ async function editFirstModel(run: BrowserRun) {
   await element.getByLabel('Actions').fill('counter = 1;');
 
   const execution = run.page.getByRole('region', { name: 'Execution' });
-  await execution.getByLabel('Generator').fill('random(vertex_coverage(100))');
-  await expect(execution.getByLabel('Generator')).toHaveValue('random(vertex_coverage(100))');
+  await execution.getByRole('button', { name: 'Text', exact: true }).click();
+  await execution.getByLabel('Generator', { exact: true }).fill('random(vertex_coverage(100))');
+  await expect(execution.getByLabel('Generator', { exact: true })).toHaveValue('random(vertex_coverage(100))');
   await expect(run.page.getByText('Model OK', { exact: true })).toBeVisible();
 
   const exported = await saveModels(run.page);
@@ -476,7 +532,8 @@ async function createSecondModel(run: BrowserRun) {
     await element.getByLabel('Actions').fill(edge.actions?.join('\n') ?? '');
     await element.getByLabel('Guard').fill(edge.guard ?? '');
   }
-  await run.page.getByRole('region', { name: 'Execution' }).getByLabel('Generator')
+  await run.page.getByRole('region', { name: 'Execution' }).getByRole('button', { name: 'Text', exact: true }).click();
+  await run.page.getByRole('region', { name: 'Execution' }).getByLabel('Generator', { exact: true })
     .fill(STEP_MODEL_SPEC.generator);
   await expect(run.page.getByRole('tab', { name: 'Checkout Flow' })).toBeVisible();
   await expect(run.page.getByRole('tab', { name: STEP_MODEL_SPEC.name })).toHaveAttribute(
@@ -513,7 +570,8 @@ async function switchModelsAndExport(run: BrowserRun) {
   await firstTab.click();
   await expect(firstTab).toHaveAttribute('aria-selected', 'true');
   const firstName = run.page.getByRole('region', { name: 'Model' }).getByLabel('Name');
-  const firstGenerator = run.page.getByRole('region', { name: 'Execution' }).getByLabel('Generator');
+  await run.page.getByRole('region', { name: 'Execution' }).getByRole('button', { name: 'Text', exact: true }).click();
+  const firstGenerator = run.page.getByRole('region', { name: 'Execution' }).getByLabel('Generator', { exact: true });
   await expect(firstName).toHaveValue('Checkout Flow');
   const firstGeneratorValue = await firstGenerator.inputValue();
   expect(['random(edge_coverage(100))', 'random(vertex_coverage(100))'])
@@ -523,10 +581,12 @@ async function switchModelsAndExport(run: BrowserRun) {
   await expect(secondTab).toHaveAttribute('aria-selected', 'true');
   await expect(run.page.getByRole('region', { name: 'Model' }).getByLabel('Name'))
     .toHaveValue('Refund Flow');
-  await expect(run.page.getByRole('region', { name: 'Execution' }).getByLabel('Generator'))
+  await run.page.getByRole('region', { name: 'Execution' }).getByRole('button', { name: 'Text', exact: true }).click();
+  await expect(run.page.getByRole('region', { name: 'Execution' }).getByLabel('Generator', { exact: true }))
     .toHaveValue('random(edge_coverage(100))');
 
   await firstTab.click();
+  await run.page.getByRole('region', { name: 'Execution' }).getByRole('button', { name: 'Text', exact: true }).click();
   await expect(firstName).toHaveValue('Checkout Flow');
   await expect(firstGenerator).toHaveValue(firstGeneratorValue);
   await run.page.getByRole('region', { name: 'Global' }).getByLabel('Auto').uncheck();
