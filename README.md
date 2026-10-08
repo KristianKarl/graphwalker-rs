@@ -42,6 +42,16 @@ cargo build --release
 cargo test
 ```
 
+### Building Studio from source
+
+Cargo embeds Studio's checked-in frontend assets; it does not build the frontend itself. To rebuild those assets from source and then build all workspace crates, run from the repository root:
+
+```bash
+npm --prefix graphwalker-studio/frontend ci
+npm --prefix graphwalker-studio/frontend run build
+cargo build --workspace --locked
+```
+
 The main binaries are:
 
 | Binary | Location | Description |

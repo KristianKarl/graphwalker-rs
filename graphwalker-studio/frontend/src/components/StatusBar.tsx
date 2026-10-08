@@ -1,4 +1,4 @@
-import { useState, useEffect, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { AlertTriangle, X, Eye, Radio } from 'lucide-react';
 import { useExecutionStore } from '@/store/execution-store';
 import { useModelStore } from '@/store/model-store';
@@ -32,8 +32,11 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
   const subscribedSessionId = useSessionStore((s) => s.subscribedSessionId);
   const observing = useSessionStore((s) => s.observing);
 
-  const [expanded, setExpanded] = useState(false);
-  const [expandedSource, setExpandedSource] = useState<'issues' | 'check' | null>(null);
+  const [expandedPanel, setExpandedPanel] = useState<{
+    source: 'issues' | 'check' | 'closed';
+    issues: string[];
+    checkIssues: string[];
+  } | null>(null);
   const [showSessions, setShowSessions] = useState(false);
   const [connecting, setConnecting] = useState(false);
 
@@ -54,29 +57,27 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
     }
   };
 
-  useEffect(() => {
-    if (issues.length > 0) { setExpanded(true); setExpandedSource('issues'); }
-  }, [issues]);
-
-  useEffect(() => {
-    if (checkIssues.length > 0) { setExpanded(true); setExpandedSource('check'); }
-  }, [checkIssues]);
-
   const vals = Object.values(fulfillment);
   const pct = vals.length === 0 ? 0 : vals.reduce((a, b) => a + b, 0) / vals.length;
   const hasIssues = issues.length > 0;
   const hasCheckIssues = checkIssues.length > 0;
   const checkOk = hasModels && !hasCheckIssues;
+  const panelDataChanged = expandedPanel !== null
+    && (expandedPanel.issues !== issues || expandedPanel.checkIssues !== checkIssues);
+  const activeSource = panelDataChanged || expandedPanel === null
+    ? hasIssues ? 'issues' : hasCheckIssues ? 'check' : null
+    : expandedPanel.source === 'closed' ? null : expandedPanel.source;
 
-  const visibleIssues = expanded && expandedSource === 'issues' ? issues
-    : expanded && expandedSource === 'check' ? checkIssues
+  const visibleIssues = activeSource === 'issues' ? issues
+    : activeSource === 'check' ? checkIssues
     : [];
-  const visibleLabel = expandedSource === 'issues' ? 'Execution Issues' : 'Model Check';
+  const visibleLabel = activeSource === 'issues' ? 'Execution Issues' : 'Model Check';
   const dismissVisible = () => {
-    if (expandedSource === 'issues') setIssues([]);
-    if (expandedSource === 'check') setCheckIssues([]);
-    setExpanded(false);
-    setExpandedSource(null);
+    const nextIssues = activeSource === 'issues' ? [] : issues;
+    const nextCheckIssues = activeSource === 'check' ? [] : checkIssues;
+    if (activeSource === 'issues') setIssues(nextIssues);
+    if (activeSource === 'check') setCheckIssues(nextCheckIssues);
+    setExpandedPanel({ source: 'closed', issues: nextIssues, checkIssues: nextCheckIssues });
   };
 
   return (
@@ -178,9 +179,11 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
             className="flex items-center gap-1.5 mr-3"
             onClick={() => {
               if (!hasCheckIssues) return;
-              const show = !(expanded && expandedSource === 'check');
-              setExpanded(show);
-              setExpandedSource(show ? 'check' : null);
+              setExpandedPanel({
+                source: activeSource === 'check' ? 'closed' : 'check',
+                issues,
+                checkIssues,
+              });
             }}
             title={checkOk
               ? 'The current models passed validation. Click to review model-check results when issues are present.'
@@ -233,9 +236,11 @@ export default function StatusBar({ onSubscribeSession, onUnsubscribeSession }: 
         {hasIssues && (
           <button
             onClick={() => {
-              const show = !(expanded && expandedSource === 'issues');
-              setExpanded(show);
-              setExpandedSource(show ? 'issues' : null);
+              setExpandedPanel({
+                source: activeSource === 'issues' ? 'closed' : 'issues',
+                issues,
+                checkIssues,
+              });
             }}
             className="text-danger ml-auto flex items-center gap-1.5 hover:text-danger/80 transition-colors"
             title="View execution errors reported during the current walk."
