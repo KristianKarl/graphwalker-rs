@@ -43,14 +43,14 @@ pub fn read_graphml_string(xml: &str) -> Result<Vec<ModelContext>, IoError> {
             Ok(Event::Start(ref e)) => {
                 let local_name = e.local_name();
                 match local_name.as_ref() {
-                    b"node" => {
+                    "node" => {
                         in_node = true;
                         current_node_id = extract_attr(e, b"id").unwrap_or_default();
                         node_map.entry(current_node_id.clone()).or_insert(RawNode {
                             label: String::new(),
                         });
                     }
-                    b"edge" => {
+                    "edge" => {
                         in_edge = true;
                         current_edge_id = extract_attr(e, b"id").unwrap_or_default();
                         let source = extract_attr(e, b"source").unwrap_or_default();
@@ -62,11 +62,11 @@ pub fn read_graphml_string(xml: &str) -> Result<Vec<ModelContext>, IoError> {
                             label: String::new(),
                         });
                     }
-                    b"NodeLabel" if in_node => {
+                    "NodeLabel" if in_node => {
                         in_node_label = true;
                         label_text.clear();
                     }
-                    b"EdgeLabel" if in_edge => {
+                    "EdgeLabel" if in_edge => {
                         in_edge_label = true;
                         label_text.clear();
                     }
@@ -76,13 +76,13 @@ pub fn read_graphml_string(xml: &str) -> Result<Vec<ModelContext>, IoError> {
             Ok(Event::Empty(ref e)) => {
                 let local_name = e.local_name();
                 match local_name.as_ref() {
-                    b"node" => {
+                    "node" => {
                         let id = extract_attr(e, b"id").unwrap_or_default();
                         node_map.entry(id.clone()).or_insert(RawNode {
                             label: String::new(),
                         });
                     }
-                    b"edge" => {
+                    "edge" => {
                         let id = extract_attr(e, b"id").unwrap_or_default();
                         let source = extract_attr(e, b"source").unwrap_or_default();
                         let target = extract_attr(e, b"target").unwrap_or_default();
@@ -97,20 +97,27 @@ pub fn read_graphml_string(xml: &str) -> Result<Vec<ModelContext>, IoError> {
                 }
             }
             Ok(Event::Text(ref e)) if in_node_label || in_edge_label => {
-                if let Ok(text) = e.unescape() {
+                if let Ok(text) = quick_xml::escape::unescape(e.as_ref()) {
                     label_text.push_str(&text);
+                }
+            }
+            Ok(Event::GeneralRef(ref e)) if in_node_label || in_edge_label => {
+                if let Ok(Some(ch)) = e.resolve_char_ref() {
+                    label_text.push(ch);
+                } else if let Some(entity) = quick_xml::escape::resolve_predefined_entity(e.as_ref()) {
+                    label_text.push_str(entity);
                 }
             }
             Ok(Event::End(ref e)) => {
                 let local_name = e.local_name();
                 match local_name.as_ref() {
-                    b"node" => {
+                    "node" => {
                         in_node = false;
                     }
-                    b"edge" => {
+                    "edge" => {
                         in_edge = false;
                     }
-                    b"NodeLabel" if in_node_label => {
+                    "NodeLabel" if in_node_label => {
                         in_node_label = false;
                         let label = label_text.trim().to_string();
                         if !label.is_empty() {
@@ -121,7 +128,7 @@ pub fn read_graphml_string(xml: &str) -> Result<Vec<ModelContext>, IoError> {
                             }
                         }
                     }
-                    b"EdgeLabel" if in_edge_label => {
+                    "EdgeLabel" if in_edge_label => {
                         in_edge_label = false;
                         let label = label_text.trim().to_string();
                         if !label.is_empty() {
@@ -368,8 +375,8 @@ fn parse_inline_single_line(label: &str) -> Result<ParsedEdge, yed::YedParseErro
 
 fn extract_attr(e: &quick_xml::events::BytesStart, attr_name: &[u8]) -> Option<String> {
     for attr in e.attributes().flatten() {
-        if attr.key.as_ref() == attr_name {
-            return String::from_utf8(attr.value.to_vec()).ok();
+        if attr.key.as_ref().as_bytes() == attr_name {
+            return Some(attr.value.into_owned());
         }
     }
     None
