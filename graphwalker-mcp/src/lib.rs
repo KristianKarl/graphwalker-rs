@@ -3,7 +3,7 @@ mod dto;
 use graphwalker_service as service;
 use rmcp::{
     handler::server::wrapper::Parameters,
-    model::{CallToolResult, Implementation, ServerCapabilities, ServerInfo},
+    model::{CallToolResult, Implementation, ServerCapabilities, ServerConfig},
     tool, tool_handler, tool_router, ServerHandler,
 };
 use serde::Serialize;
@@ -606,8 +606,8 @@ impl GraphWalkerMcp {
 
 #[tool_handler]
 impl ServerHandler for GraphWalkerMcp {
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+    fn get_info(&self) -> ServerConfig {
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(Implementation::new(
                 env!("CARGO_PKG_NAME"),
                 env!("CARGO_PKG_VERSION"),

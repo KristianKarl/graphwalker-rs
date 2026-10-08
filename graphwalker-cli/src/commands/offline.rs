@@ -1,8 +1,6 @@
 use std::io::Write;
 
 use clap::Args as ClapArgs;
-use rand::prelude::*;
-
 use graphwalker_core::machine::Machine;
 use graphwalker_core::model::ElementIndex;
 
@@ -58,7 +56,7 @@ pub fn run(args: Args) -> CliResult {
     let seed = if args.seed != 0 {
         args.seed
     } else {
-        rand::thread_rng().gen()
+        rand::random::<u64>()
     };
     let entries = prepare_entries_with_seed(contexts, Some(seed))?;
     let mut machine = Machine::new_with_seed(entries, seed)?;

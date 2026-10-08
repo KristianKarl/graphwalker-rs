@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use rhai::{Dynamic, Engine, Scope};
 
 use crate::algorithm::FloydWarshall;
@@ -97,7 +97,7 @@ impl ExecutionContext {
             requirement_status: HashMap::new(),
             predefined_path_current_edge_index: 0,
             floyd_warshall: OnceCell::new(),
-            rng: StdRng::from_entropy(),
+            rng: StdRng::from_rng(&mut rand::rng()),
             engine: Self::create_engine(),
             local_scope: RefCell::new(Scope::new()),
             global_scope: Rc::new(RefCell::new(Scope::new())),
@@ -464,11 +464,11 @@ impl ExecutionContext {
     // -- RNG --
 
     pub fn gen_usize(&mut self, bound: usize) -> usize {
-        self.rng.gen_range(0..bound)
+        self.rng.random_range(0..bound)
     }
 
     pub fn gen_range_int(&mut self, range: std::ops::Range<i32>) -> i32 {
-        self.rng.gen_range(range)
+        self.rng.random_range(range)
     }
 
     pub fn shuffle<T>(&mut self, slice: &mut [T]) {
@@ -550,7 +550,7 @@ pub struct Machine {
 
 impl Machine {
     pub fn new(entries: Vec<(ExecutionContext, PathGenerator)>) -> Result<Self, MachineError> {
-        Self::new_internal(entries, StdRng::from_entropy())
+        Self::new_internal(entries, StdRng::from_rng(&mut rand::rng()))
     }
 
     pub fn new_with_seed(
@@ -848,7 +848,7 @@ impl Machine {
             return;
         }
 
-        let pick = self.rng.gen_range(0..candidates.len());
+        let pick = self.rng.random_range(0..candidates.len());
         let (target_ctx_idx, target_vertex_idx) = candidates[pick];
 
         if target_ctx_idx != current_idx {

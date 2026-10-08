@@ -6,7 +6,6 @@ use graphwalker_core::model::{Action, EdgeIndex, ElementIndex, VertexIndex};
 use graphwalker_dsl::generator::parse_generator;
 use graphwalker_io::json::{read_json_string, write_json_string};
 use graphwalker_io::ModelContext;
-use rand::Rng;
 use serde_json::Value;
 
 use crate::types::{
@@ -65,7 +64,7 @@ impl ExecutionRegistry {
         let execution_id = loop {
             let candidate = ExecutionId::new(format!(
                 "execution_{:032x}",
-                rand::thread_rng().gen::<u128>()
+                rand::random::<u128>()
             ));
             if !executions.contains_key(&candidate) {
                 break candidate;
@@ -212,7 +211,7 @@ impl ExecutionState {
     fn new(request: StartExecution) -> ServiceResult<Self> {
         let contexts = read_json_string(&request.model.to_string())
             .map_err(|error| ServiceError::invalid_model(error.to_string()))?;
-        let seed = request.seed.unwrap_or_else(|| rand::thread_rng().gen());
+        let seed = request.seed.unwrap_or_else(rand::random::<u64>);
         let machine = build_machine(&contexts, seed, request.global_data.as_deref())?;
         let json = write_json_string(&contexts)
             .map_err(|error| ServiceError::internal(error.to_string()))?;

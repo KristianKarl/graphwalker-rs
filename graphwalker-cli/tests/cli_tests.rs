@@ -507,11 +507,11 @@ fn check_valid_model_with_gw_flag() {
 }
 
 #[test]
-fn check_login_model_reports_nameless_vertex() {
+fn check_login_model_without_deprecated_start_vertex_is_valid() {
     gw().args(["check", "-g", &fixture("json/Login.json")])
         .assert()
-        .failure()
-        .stdout(predicate::str::contains("Name of vertex cannot be null"));
+        .success()
+        .stdout(predicate::str::contains("No issues found"));
 }
 
 #[test]
