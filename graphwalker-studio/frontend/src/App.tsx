@@ -42,7 +42,10 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const runningRef = useRef(false);
   const delayRef = useRef(delay);
-  delayRef.current = delay;
+
+  useEffect(() => {
+    delayRef.current = delay;
+  }, [delay]);
 
   useEffect(() => {
     const unsubBroadcast = wsClient.onBroadcast((msg) => {
