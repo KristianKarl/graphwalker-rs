@@ -1,6 +1,6 @@
 [package]
 name = "graphwalker-restful"
-version = "1.0.3"
+version = "1.0.4"
 edition = "2021"
 rust-version.workspace = true
 license = "MIT"
@@ -13,8 +13,8 @@ keywords = ["graphwalker", "model-based-testing", "rest", "websocket"]
 categories = ["development-tools::testing", "web-programming::http-server"]
 
 [dependencies]
-graphwalker-io = { version = "1.0.3", path = "../graphwalker-io" }
-graphwalker-service = { version = "1.0.3", path = "../graphwalker-service" }
+graphwalker-io = { version = "1.0.4", path = "../graphwalker-io" }
+graphwalker-service = { version = "1.0.4", path = "../graphwalker-service" }
 axum = { version = "0.8", features = ["ws"] }
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "signal"] }
