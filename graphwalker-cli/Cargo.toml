@@ -1,6 +1,6 @@
 [package]
 name = "graphwalker"
-version = "1.0.3"
+version = "1.0.4"
 edition = "2021"
 rust-version.workspace = true
 license = "MIT"
@@ -18,11 +18,11 @@ name = "graphwalker"
 path = "src/main.rs"
 
 [dependencies]
-graphwalker-core = { version = "1.0.3", path = "../graphwalker-core" }
-graphwalker-dsl = { version = "1.0.3", path = "../graphwalker-dsl" }
-graphwalker-io = { version = "1.0.3", path = "../graphwalker-io" }
-graphwalker-model-checker = { version = "1.0.3", path = "../graphwalker-model-checker" }
-graphwalker-restful = { version = "1.0.3", path = "../graphwalker-restful" }
+graphwalker-core = { version = "1.0.4", path = "../graphwalker-core" }
+graphwalker-dsl = { version = "1.0.4", path = "../graphwalker-dsl" }
+graphwalker-io = { version = "1.0.4", path = "../graphwalker-io" }
+graphwalker-model-checker = { version = "1.0.4", path = "../graphwalker-model-checker" }
+graphwalker-restful = { version = "1.0.4", path = "../graphwalker-restful" }
 rand = "0.10.3"
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }

@@ -1,6 +1,6 @@
 [package]
 name = "graphwalker-model-checker"
-version = "1.0.3"
+version = "1.0.4"
 edition = "2021"
 rust-version.workspace = true
 license = "MIT"
@@ -13,9 +13,9 @@ keywords = ["graphwalker", "model-based-testing", "model-checking"]
 categories = ["development-tools::testing"]
 
 [dependencies]
-graphwalker-core = { version = "1.0.3", path = "../graphwalker-core" }
-graphwalker-dsl = { version = "1.0.3", path = "../graphwalker-dsl" }
-graphwalker-io = { version = "1.0.3", path = "../graphwalker-io" }
+graphwalker-core = { version = "1.0.4", path = "../graphwalker-core" }
+graphwalker-dsl = { version = "1.0.4", path = "../graphwalker-dsl" }
+graphwalker-io = { version = "1.0.4", path = "../graphwalker-io" }
 tracing = "0.1"
 
 [dev-dependencies]
